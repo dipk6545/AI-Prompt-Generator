@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Eye, X } from 'lucide-react';
+import { ChevronDown, Info, X } from 'lucide-react';
 
 interface OptimizationOptionsProps {
   optimizationLevel: string;
@@ -33,7 +33,7 @@ export const OptimizationOptions: React.FC<OptimizationOptionsProps> = ({
             className="p-0.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-violet-600 transition-colors"
             title="Explain Levels"
           >
-            <Eye className="w-3.5 h-3.5" />
+            <Info className="w-3.5 h-3.5" />
           </button>
         </div>
         <div className="relative">
@@ -63,7 +63,7 @@ export const OptimizationOptions: React.FC<OptimizationOptionsProps> = ({
             className="p-0.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-violet-600 transition-colors"
             title="Explain Techniques"
           >
-            <Eye className="w-3.5 h-3.5" />
+            <Info className="w-3.5 h-3.5" />
           </button>
         </div>
         <div className="relative">
