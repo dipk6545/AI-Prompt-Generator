@@ -56,7 +56,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
   onAnalyze,
 }) => {
   return (
-    <div className="flex-1 flex flex-col p-6 gap-6 overflow-hidden min-h-0">
+    <div className="flex-1 flex flex-col p-6 gap-6 overflow-y-auto min-h-0">
       {/* Error Banner */}
       {errorMsg && (
         <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-800 text-sm animate-shake">
@@ -95,7 +95,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
         <div className="flex flex-col gap-6 min-h-0">
           
           {/* Top Panel - Analysis Section */}
-          <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-0">
+          <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[350px]">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-2">
                 <BarChart3 className="w-4 h-4 text-violet-500" />
