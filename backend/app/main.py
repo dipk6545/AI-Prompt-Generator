@@ -6,7 +6,11 @@ from app.schemas.models import (
     OptimizePromptRequest, OptimizePromptResponse,
     ValidateApiKeyRequest, ValidateApiKeyResponse
 )
+from app.schemas.prompt_analysis import PromptAnalysisRequest, PromptAnalysisResponse
 from app.services.llm_service import optimize_prompt_llm, validate_key_provider
+from app.services.prompt_analyzer import PromptAnalyzer
+
+analyzer = PromptAnalyzer()
 
 app = FastAPI(
     title="PromptCraft AI Backend",
@@ -118,6 +122,17 @@ async def validate_api_key(payload: ValidateApiKeyRequest):
         return ValidateApiKeyResponse(
             valid=False,
             message=f"Failed to authenticate with {provider}. Verify the key and try again."
+        )
+
+@app.post("/api/analyze-prompt", response_model=PromptAnalysisResponse)
+async def analyze_prompt(payload: PromptAnalysisRequest):
+    try:
+        result = analyzer.analyze(payload.prompt)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Prompt analysis failed: {str(e)}"
         )
 
 if __name__ == "__main__":
