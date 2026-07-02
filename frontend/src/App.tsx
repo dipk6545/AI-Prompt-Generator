@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
-import { PromptPanels, type AnalysisResponse } from './components/PromptPanels';
+import { PromptPanels } from './components/PromptPanels';
 import { AdminDialog } from './components/AdminDialog';
 import { encryptData, decryptData } from './utils/crypto';
 
@@ -20,10 +20,6 @@ function App() {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  // New Analysis State
-  const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
   // Initialize and load saved keys & admin session
   useEffect(() => {
     // Check session storage for admin mode
@@ -35,7 +31,7 @@ function App() {
     // Load and decrypt stored user API keys
     const loadKeys = async () => {
       const loadedKeys: Record<string, string> = {};
-      const providers = ['GROQ', 'MISTRAL', 'CEREBRAS', 'GEMINI', 'OPENROUTER'];
+      const providers = ['GROQ', 'MISTRAL', 'CEREBRAS', 'GEMINI'];
       
       for (const prov of providers) {
         const encrypted = localStorage.getItem(`promptcraft_key_${prov}`);
@@ -108,32 +104,6 @@ function App() {
     }
   };
 
-  const handleAnalyze = async () => {
-    if (!originalPrompt.trim()) return;
-    setErrorMsg(null);
-    setIsAnalyzing(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/analyze-prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: originalPrompt }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to analyze prompt.');
-      }
-
-      const data = await response.json();
-      setAnalysisData(data);
-    } catch (error: any) {
-      console.error('Analysis error:', error);
-      setErrorMsg(error.message || 'An error occurred while communicating with the analysis server.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
   const handleGenerate = async () => {
     setErrorMsg(null);
     setOptimizedPrompt('');
@@ -151,17 +121,6 @@ function App() {
     setIsLoading(true);
 
     try {
-      // Automatically run analysis alongside optimization for unified data update
-      const analyzeResponse = await fetch(`${API_BASE_URL}/api/analyze-prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: originalPrompt }),
-      });
-      if (analyzeResponse.ok) {
-        const analyzeData = await analyzeResponse.json();
-        setAnalysisData(analyzeData);
-      }
-
       const response = await fetch(`${API_BASE_URL}/optimize-prompt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -220,9 +179,6 @@ function App() {
         isCopied={isCopied}
         onCopy={handleCopy}
         errorMsg={errorMsg}
-        analysisData={analysisData}
-        isAnalyzing={isAnalyzing}
-        onAnalyze={handleAnalyze}
       />
 
       {/* Admin Authorization Modal */}
