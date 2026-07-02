@@ -10,16 +10,19 @@ SYSTEM_PROMPT = (
     "Output the raw optimized prompt directly."
 )
 
-async def call_groq(prompt: str, api_key: str) -> str:
+async def call_groq(prompt: str, api_key: str, system_prompt: Optional[str] = None) -> str:
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
+    
+    sys_prompt = system_prompt if system_prompt else SYSTEM_PROMPT
+    
     payload = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": f"Optimize this prompt:\n\n{prompt}"}
         ],
         "temperature": 0.5
@@ -38,16 +41,19 @@ async def call_groq(prompt: str, api_key: str) -> str:
         result = response.json()
         return result["choices"][0]["message"]["content"].strip()
 
-async def call_mistral(prompt: str, api_key: str) -> str:
+async def call_mistral(prompt: str, api_key: str, system_prompt: Optional[str] = None) -> str:
     url = "https://api.mistral.ai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
+    
+    sys_prompt = system_prompt if system_prompt else SYSTEM_PROMPT
+    
     payload = {
         "model": "mistral-large-latest",
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": f"Optimize this prompt:\n\n{prompt}"}
         ],
         "temperature": 0.5
@@ -63,16 +69,19 @@ async def call_mistral(prompt: str, api_key: str) -> str:
         result = response.json()
         return result["choices"][0]["message"]["content"].strip()
 
-async def call_cerebras(prompt: str, api_key: str) -> str:
+async def call_cerebras(prompt: str, api_key: str, system_prompt: Optional[str] = None) -> str:
     url = "https://api.cerebras.ai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
+    
+    sys_prompt = system_prompt if system_prompt else SYSTEM_PROMPT
+    
     payload = {
         "model": "llama3.1-70b",
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": f"Optimize this prompt:\n\n{prompt}"}
         ],
         "temperature": 0.5
@@ -88,18 +97,22 @@ async def call_cerebras(prompt: str, api_key: str) -> str:
         result = response.json()
         return result["choices"][0]["message"]["content"].strip()
 
-async def call_gemini(prompt: str, api_key: str) -> str:
+async def call_gemini(prompt: str, api_key: str, system_prompt: Optional[str] = None) -> str:
     # Use standard Google Gemini API generateContent endpoint
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     headers = {
         "Content-Type": "application/json"
     }
+    
+    sys_prompt = system_prompt if system_prompt else SYSTEM_PROMPT
+    
     payload = {
+        "systemInstruction": {
+            "parts": [{"text": sys_prompt}]
+        },
         "contents": [
             {
-                "parts": [
-                    {"text": f"{SYSTEM_PROMPT}\n\nOptimize this prompt:\n\n{prompt}"}
-                ]
+                "parts": [{"text": f"Optimize this prompt:\n\n{prompt}"}]
             }
         ],
         "generationConfig": {
@@ -116,7 +129,7 @@ async def call_gemini(prompt: str, api_key: str) -> str:
         except (KeyError, IndexError) as e:
             raise Exception(f"Failed to parse Gemini response: {response.text}")
 
-async def call_openrouter(prompt: str, api_key: str) -> str:
+async def call_openrouter(prompt: str, api_key: str, system_prompt: Optional[str] = None) -> str:
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -124,10 +137,13 @@ async def call_openrouter(prompt: str, api_key: str) -> str:
         "X-OpenRouter-Title": "PromptCraft AI",
         "Content-Type": "application/json"
     }
+    
+    sys_prompt = system_prompt if system_prompt else SYSTEM_PROMPT
+    
     payload = {
         "model": "qwen/qwen3.6-plus",
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": f"Optimize this prompt:\n\n{prompt}"}
         ],
         "temperature": 0.5,
@@ -140,20 +156,20 @@ async def call_openrouter(prompt: str, api_key: str) -> str:
         result = response.json()
         return result["choices"][0]["message"]["content"].strip()
 
-async def optimize_prompt_llm(provider: str, prompt: str, api_key: str) -> str:
+async def optimize_prompt_llm(provider: str, prompt: str, api_key: str, system_prompt: Optional[str] = None) -> str:
     prov_upper = provider.upper()
     if prov_upper == "GROQ":
-        return await call_groq(prompt, api_key)
+        return await call_groq(prompt, api_key, system_prompt)
     elif prov_upper == "MISTRAL":
-        return await call_mistral(prompt, api_key)
+        return await call_mistral(prompt, api_key, system_prompt)
     elif prov_upper == "CEREBRAS":
-        return await call_cerebras(prompt, api_key)
+        return await call_cerebras(prompt, api_key, system_prompt)
     elif prov_upper == "GEMINI":
-        return await call_gemini(prompt, api_key)
+        return await call_gemini(prompt, api_key, system_prompt)
     elif prov_upper == "OPENROUTER":
-        return await call_openrouter(prompt, api_key)
+        return await call_openrouter(prompt, api_key, system_prompt)
     else:
-        raise ValueError(f"Unsupported provider: {provider}")
+        raise ValueError(f"Unknown LLM provider: {provider}")
 
 async def validate_key_provider(provider: str, api_key: str) -> bool:
     # Test key with a simple short prompt call

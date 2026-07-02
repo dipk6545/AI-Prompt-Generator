@@ -20,6 +20,12 @@ function App() {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
+  // Phase 3 States
+  const [optimizationLevel, setOptimizationLevel] = useState('Professional');
+  const [optimizationTechnique, setOptimizationTechnique] = useState('Auto Detect');
+  const [optimizationReport, setOptimizationReport] = useState<any[]>([]);
+  const [promptDiff, setPromptDiff] = useState<string>('');
+
   // New Analysis State
   const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -137,6 +143,8 @@ function App() {
   const handleGenerate = async () => {
     setErrorMsg(null);
     setOptimizedPrompt('');
+    setOptimizationReport([]);
+    setPromptDiff('');
 
     // Check credentials
     let targetKey = '';
@@ -162,7 +170,7 @@ function App() {
         setAnalysisData(analyzeData);
       }
 
-      const response = await fetch(`${API_BASE_URL}/optimize-prompt`, {
+      const response = await fetch(`${API_BASE_URL}/api/optimize-prompt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -170,6 +178,8 @@ function App() {
           provider: provider,
           api_key: useServerKey ? null : targetKey,
           use_server_key: useServerKey,
+          optimization_level: optimizationLevel,
+          technique: optimizationTechnique
         }),
       });
 
@@ -180,6 +190,8 @@ function App() {
 
       const data = await response.json();
       setOptimizedPrompt(data.optimized_prompt);
+      setOptimizationReport(data.optimization_report || []);
+      setPromptDiff(data.diff || '');
     } catch (error: any) {
       console.error('Optimization error:', error);
       setErrorMsg(error.message || 'An error occurred while communicating with the server.');
@@ -223,6 +235,12 @@ function App() {
         analysisData={analysisData}
         isAnalyzing={isAnalyzing}
         onAnalyze={handleAnalyze}
+        optimizationLevel={optimizationLevel}
+        setOptimizationLevel={setOptimizationLevel}
+        optimizationTechnique={optimizationTechnique}
+        setOptimizationTechnique={setOptimizationTechnique}
+        optimizationReport={optimizationReport}
+        promptDiff={promptDiff}
       />
 
       {/* Admin Authorization Modal */}

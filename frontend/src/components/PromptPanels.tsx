@@ -1,5 +1,8 @@
 import React from 'react';
-import { Sparkles, Copy, Check, Info, ShieldAlert, BarChart3, AlertCircle, Lightbulb, Loader2 } from 'lucide-react';
+import { Sparkles, Copy, Check, Info, ShieldAlert, BarChart3, AlertCircle, Lightbulb, Loader2, Download } from 'lucide-react';
+import { OptimizationOptions } from './OptimizationOptions';
+import { OptimizationReportCard } from './OptimizationReportCard';
+import { PromptDiffViewer } from './PromptDiffViewer';
 
 export interface MetricDetail {
   score: number;
@@ -22,11 +25,17 @@ interface PromptPanelsProps {
   isCopied: boolean;
   onCopy: () => void;
   errorMsg: string | null;
-  
+
   // New Prompt Analysis Props
   analysisData: AnalysisResponse | null;
   isAnalyzing: boolean;
   onAnalyze: () => void;
+  optimizationLevel: string;
+  setOptimizationLevel: (level: string) => void;
+  optimizationTechnique: string;
+  setOptimizationTechnique: (technique: string) => void;
+  optimizationReport: any[];
+  promptDiff: string;
 }
 
 const getScoreColorClass = (score: number) => {
@@ -54,9 +63,26 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
   analysisData,
   isAnalyzing,
   onAnalyze,
+  optimizationLevel,
+  setOptimizationLevel,
+  optimizationTechnique,
+  setOptimizationTechnique,
+  optimizationReport,
+  promptDiff,
 }) => {
+  const downloadFile = (format: 'txt' | 'md') => {
+    if (!optimizedPrompt) return;
+    const blob = new Blob([optimizedPrompt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `optimized-prompt.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="flex-1 flex flex-col p-4 pb-20 gap-4 overflow-y-auto min-h-0">
+    <div className="flex-1 flex flex-col p-4 pb-16 gap-4 overflow-y-auto min-h-0 mb-3">
       {/* Error Banner */}
       {errorMsg && (
         <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-800 text-sm animate-shake">
@@ -70,12 +96,12 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
 
       {/* Panels Layout: 2 Columns */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
-        
-        {/* Left Column - Split: Top Input, Bottom Output */}
-        <div className="grid grid-rows-2 gap-4 h-full min-h-0">
-          
+
+        {/* Left Column - Split: Top Input, Bottom Output, Report, Diff */}
+        <div className="flex flex-col gap-4 h-full min-h-0 overflow-y-auto pr-1">
+
           {/* Top Panel - Input */}
-          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all">
+          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all shrink-0 min-h-[250px] flex-1">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-violet-500" />
@@ -95,7 +121,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
           </div>
 
           {/* Bottom Panel - Optimized Prompt Output Section */}
-          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden shrink-0 min-h-[250px] flex-1">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -121,6 +147,20 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
                     )}
                   </button>
                 )}
+                <div className="relative group">
+                  <button
+                    className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-all"
+                    title="Export File"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export</span>
+                  </button>
+                  <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                    <button onClick={() => downloadFile('txt')} className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 text-slate-700">As .TXT</button>
+                    <button onClick={() => downloadFile('md')} className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 text-slate-700">As .MD</button>
+                  </div>
+                </div>
+
                 <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider">
                   Output
                 </span>
@@ -130,9 +170,13 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
               value={optimizedPrompt}
               readOnly
               placeholder="Your optimized prompt will appear here after generation..."
-              className="flex-1 w-full p-5 bg-slate-50/30 text-slate-800 placeholder-slate-400 focus:outline-none resize-none text-sm leading-relaxed font-normal"
+              className="flex-1 w-full p-5 bg-slate-50/30 text-slate-800 placeholder-slate-400 focus:outline-none resize-none text-sm leading-relaxed font-normal min-h-[150px]"
             />
           </div>
+
+          {/* Optimization Report & Diff View */}
+          <OptimizationReportCard report={optimizationReport} />
+          <PromptDiffViewer diffText={promptDiff} />
 
         </div>
 
@@ -242,42 +286,53 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       </div>
 
       {/* Floating Action Buttons Panel */}
-      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 flex flex-col sm:flex-row items-center justify-center gap-3 pointer-events-none w-full px-4">
-        <button
-          onClick={onAnalyze}
-          disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
-          className="pointer-events-auto w-full sm:w-auto px-3 py-1.5 bg-white/40 backdrop-blur-md border border-slate-200/40 hover:bg-white/50 disabled:bg-slate-50/40 text-slate-800 disabled:text-slate-400 text-[11px] font-semibold rounded-lg transition-all active:scale-[0.99] flex items-center justify-center space-x-1 focus:outline-none shadow-md cursor-pointer disabled:cursor-not-allowed"
-        >
-          {isAnalyzing ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin text-violet-500" />
-              <span>Analyzing...</span>
-            </>
-          ) : (
-            <>
-              <BarChart3 className="w-3 h-3 text-violet-500" />
-              <span>Analyze Prompt</span>
-            </>
-          )}
-        </button>
+      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center justify-center gap-3 pointer-events-none w-full px-4">
+        
+        <OptimizationOptions 
+          optimizationLevel={optimizationLevel}
+          setOptimizationLevel={setOptimizationLevel}
+          optimizationTechnique={optimizationTechnique}
+          setOptimizationTechnique={setOptimizationTechnique}
+          disabled={isLoading || isAnalyzing}
+        />
+        
+        <div className="flex flex-col sm:flex-row gap-3 pointer-events-none">
+          <button
+            onClick={onAnalyze}
+            disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
+            className="pointer-events-auto w-full sm:w-auto px-3 py-1.5 bg-white/40 backdrop-blur-md border border-slate-200/40 hover:bg-white/50 disabled:bg-slate-50/40 text-slate-800 disabled:text-slate-400 text-[11px] font-semibold rounded-lg transition-all active:scale-[0.99] flex items-center justify-center space-x-1 focus:outline-none shadow-md cursor-pointer disabled:cursor-not-allowed"
+          >
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin text-violet-500" />
+                <span>Analyzing...</span>
+              </>
+            ) : (
+              <>
+                <BarChart3 className="w-3 h-3 text-violet-500" />
+                <span>Analyze Prompt</span>
+              </>
+            )}
+          </button>
 
-        <button
-          onClick={onGenerate}
-          disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
-          className="pointer-events-auto w-full sm:w-auto px-3 py-1.5 bg-violet-600/40 backdrop-blur-md border border-violet-500/20 hover:bg-violet-600/50 disabled:bg-slate-300/40 text-white disabled:text-slate-200 text-[11px] font-bold rounded-lg transition-all shadow-md active:scale-[0.99] flex items-center justify-center space-x-1 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin text-white" />
-              <span>Optimizing...</span>
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-3 h-3" />
-              <span>Optimize Prompt</span>
-            </>
-          )}
-        </button>
+          <button
+            onClick={onGenerate}
+            disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
+            className="pointer-events-auto w-full sm:w-auto px-3 py-1.5 bg-violet-600/40 backdrop-blur-md border border-violet-500/20 hover:bg-violet-600/50 disabled:bg-slate-300/40 text-white disabled:text-slate-200 text-[11px] font-bold rounded-lg transition-all shadow-md active:scale-[0.99] flex items-center justify-center space-x-1 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin text-white" />
+                <span>Optimizing...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3 h-3" />
+                <span>Optimize Prompt</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

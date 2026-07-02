@@ -62,6 +62,37 @@ async def authenticate_admin(payload: AdminAuthRequest):
             detail="Incorrect password."
         )
 
+from app.schemas.prompt_enhancement import OptimizePromptRequestV2, OptimizePromptResponseV2
+from app.services.prompt_optimizer import enhance_prompt
+
+@app.post("/api/optimize-prompt", response_model=OptimizePromptResponseV2)
+async def api_optimize_prompt(payload: OptimizePromptRequestV2):
+    provider = payload.provider.upper()
+    
+    if payload.use_server_key:
+        api_key = get_server_key(provider)
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Server API key for {provider} is not configured."
+            )
+    else:
+        if not payload.api_key or not payload.api_key.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"API key is required for {provider} when not using Server API Key."
+            )
+        api_key = payload.api_key.strip()
+    
+    try:
+        response = await enhance_prompt(payload, api_key)
+        return response
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"LLM Provider Error: {str(e)}"
+        )
+
 @app.post("/optimize-prompt", response_model=OptimizePromptResponse)
 async def optimize_prompt(payload: OptimizePromptRequest):
     provider = payload.provider.upper()
