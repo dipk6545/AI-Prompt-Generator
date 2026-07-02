@@ -72,10 +72,10 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
         
         {/* Left Column - Split: Top Input, Bottom Output */}
-        <div className="flex flex-col gap-4 h-full min-h-0">
+        <div className="grid grid-rows-2 gap-4 h-full min-h-0">
           
           {/* Top Panel - Input */}
-          <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all min-h-[250px]">
+          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-violet-500" />
@@ -95,7 +95,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
           </div>
 
           {/* Bottom Panel - Optimized Prompt Output Section */}
-          <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[250px]">
+          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -242,11 +242,11 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       </div>
 
       {/* Floating Action Buttons Panel */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col sm:flex-row items-center justify-center gap-4 bg-white/90 backdrop-blur-lg px-6 py-4 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-200/60 w-[95%] max-w-2xl">
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col sm:flex-row items-center justify-center gap-4 pointer-events-none w-full px-4">
         <button
           onClick={onAnalyze}
           disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
-          className="w-full sm:w-64 py-3.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:bg-slate-50 text-slate-700 disabled:text-slate-400 text-sm font-semibold rounded-2xl transition-all active:scale-[0.99] flex items-center justify-center space-x-2 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
+          className="pointer-events-auto w-full sm:w-auto px-6 py-2.5 bg-white/60 backdrop-blur-md border border-slate-200/50 hover:bg-white/70 disabled:bg-slate-50/50 text-slate-800 disabled:text-slate-400 text-sm font-semibold rounded-2xl transition-all active:scale-[0.99] flex items-center justify-center space-x-2 focus:outline-none shadow-lg cursor-pointer disabled:cursor-not-allowed"
         >
           {isAnalyzing ? (
             <>
@@ -264,7 +264,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
         <button
           onClick={onGenerate}
           disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
-          className="w-full sm:w-64 py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 disabled:from-slate-200 disabled:to-slate-200 text-white disabled:text-slate-400 text-sm font-bold rounded-2xl transition-all shadow-md shadow-violet-100 hover:shadow-lg active:scale-[0.99] flex items-center justify-center space-x-2 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
+          className="pointer-events-auto w-full sm:w-auto px-6 py-2.5 bg-violet-600/50 backdrop-blur-md border border-violet-500/30 hover:bg-violet-600/60 disabled:bg-slate-300/50 text-white disabled:text-slate-200 text-sm font-bold rounded-2xl transition-all shadow-lg active:scale-[0.99] flex items-center justify-center space-x-2 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>
