@@ -1,6 +1,5 @@
 import React from 'react';
 import { Sparkles, Copy, Check, Info, ShieldAlert, BarChart3, AlertCircle, Lightbulb, Loader2, Download } from 'lucide-react';
-import { OptimizationOptions } from './OptimizationOptions';
 import { OptimizationReportCard } from './OptimizationReportCard';
 import { PromptDiffViewer } from './PromptDiffViewer';
 
@@ -30,10 +29,6 @@ interface PromptPanelsProps {
   analysisData: AnalysisResponse | null;
   isAnalyzing: boolean;
   onAnalyze: () => void;
-  optimizationLevel: string;
-  setOptimizationLevel: (level: string) => void;
-  optimizationTechnique: string;
-  setOptimizationTechnique: (technique: string) => void;
   optimizationReport: any[];
   promptDiff: string;
 }
@@ -63,10 +58,6 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
   analysisData,
   isAnalyzing,
   onAnalyze,
-  optimizationLevel,
-  setOptimizationLevel,
-  optimizationTechnique,
-  setOptimizationTechnique,
   optimizationReport,
   promptDiff,
 }) => {
@@ -287,14 +278,6 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
 
       {/* Floating Action Buttons Panel */}
       <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center justify-center gap-3 pointer-events-none w-full px-4">
-        
-        <OptimizationOptions 
-          optimizationLevel={optimizationLevel}
-          setOptimizationLevel={setOptimizationLevel}
-          optimizationTechnique={optimizationTechnique}
-          setOptimizationTechnique={setOptimizationTechnique}
-          disabled={isLoading || isAnalyzing}
-        />
         
         <div className="flex flex-col sm:flex-row gap-3 pointer-events-none">
           <button

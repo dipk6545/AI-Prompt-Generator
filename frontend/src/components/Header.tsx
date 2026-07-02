@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, ShieldCheck, Key, RefreshCw, Trash2, Eye, EyeOff } from 'lucide-react';
+import { OptimizationOptions } from './OptimizationOptions';
 
 
 interface HeaderProps {
@@ -12,6 +13,10 @@ interface HeaderProps {
   onDeleteUserKey: (provider: string) => void;
   isAdmin: boolean;
   onToggleAdmin: (active: boolean) => void;
+  optimizationLevel: string;
+  setOptimizationLevel: (level: string) => void;
+  optimizationTechnique: string;
+  setOptimizationTechnique: (technique: string) => void;
 }
 
 const PROVIDERS = ['GROQ', 'MISTRAL', 'CEREBRAS', 'GEMINI', 'OPENROUTER'];
@@ -26,6 +31,10 @@ export const Header: React.FC<HeaderProps> = ({
   onDeleteUserKey,
   isAdmin,
   onToggleAdmin,
+  optimizationLevel,
+  setOptimizationLevel,
+  optimizationTechnique,
+  setOptimizationTechnique,
 }) => {
   const [rawKeyInput, setRawKeyInput] = useState('');
   const [showKeyInput, setShowKeyInput] = useState(false);
@@ -75,6 +84,15 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Control Area */}
       <div className="flex flex-wrap items-center gap-4">
+        
+        <OptimizationOptions 
+          optimizationLevel={optimizationLevel}
+          setOptimizationLevel={setOptimizationLevel}
+          optimizationTechnique={optimizationTechnique}
+          setOptimizationTechnique={setOptimizationTechnique}
+          disabled={false}
+        />
+
         {/* Model Selection Dropdown */}
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">

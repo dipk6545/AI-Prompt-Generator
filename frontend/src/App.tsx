@@ -220,6 +220,10 @@ function App() {
         onDeleteUserKey={handleDeleteUserKey}
         isAdmin={isAdmin}
         onToggleAdmin={handleAdminToggle}
+        optimizationLevel={optimizationLevel}
+        setOptimizationLevel={setOptimizationLevel}
+        optimizationTechnique={optimizationTechnique}
+        setOptimizationTechnique={setOptimizationTechnique}
       />
 
       {/* Main Panels Workspace */}
@@ -235,10 +239,6 @@ function App() {
         analysisData={analysisData}
         isAnalyzing={isAnalyzing}
         onAnalyze={handleAnalyze}
-        optimizationLevel={optimizationLevel}
-        setOptimizationLevel={setOptimizationLevel}
-        optimizationTechnique={optimizationTechnique}
-        setOptimizationTechnique={setOptimizationTechnique}
         optimizationReport={optimizationReport}
         promptDiff={promptDiff}
       />
