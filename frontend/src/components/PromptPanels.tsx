@@ -89,7 +89,8 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
 
         {/* Left Column - Split: Top Input, Bottom Output, Report, Diff */}
-        <div className="flex flex-col gap-4 h-full overflow-y-auto pr-1 pb-16">
+        <div className="h-full overflow-y-auto pr-1 pb-16">
+          <div className="flex flex-col gap-4 min-h-full">
 
           {/* Top Panel - Input */}
           <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all flex-[3] min-h-[150px]">
@@ -168,7 +169,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
           {/* Optimization Report & Diff View */}
           <OptimizationReportCard report={optimizationReport} />
           <PromptDiffViewer diffText={promptDiff} />
-
+          </div>
         </div>
 
         {/* Right Column - Analysis Section */}
