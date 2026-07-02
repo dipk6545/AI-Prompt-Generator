@@ -17,7 +17,7 @@ async def call_groq(prompt: str, api_key: str) -> str:
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "llama-3.3-70b-specdec", # Fallback to 70b-specdec or 70b-versatile
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Optimize this prompt:\n\n{prompt}"}
