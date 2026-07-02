@@ -130,7 +130,8 @@ async def call_openrouter(prompt: str, api_key: str) -> str:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Optimize this prompt:\n\n{prompt}"}
         ],
-        "temperature": 0.5
+        "temperature": 0.5,
+        "max_tokens": 2048
     }
     async with httpx.AsyncClient() as client:
         response = await client.post(url, json=payload, headers=headers, timeout=30.0)
