@@ -90,10 +90,13 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
 
         {/* Left Column - Split: Top Input, Bottom Output, Report, Diff */}
         <div className="h-full overflow-y-auto pr-1 pb-16">
-          <div className="flex flex-col gap-4 min-h-full">
+          <div 
+            className="grid gap-4 min-h-full"
+            style={{ gridTemplateRows: 'minmax(150px, 3fr) minmax(250px, 7fr) auto auto' }}
+          >
 
           {/* Top Panel - Input */}
-          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all flex-[3] min-h-[150px]">
+          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-violet-500" />
@@ -113,7 +116,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
           </div>
 
           {/* Bottom Panel - Optimized Prompt Output Section */}
-          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex-[7] min-h-[250px]">
+          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
