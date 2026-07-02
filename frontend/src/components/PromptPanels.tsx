@@ -242,20 +242,20 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       </div>
 
       {/* Floating Action Buttons Panel */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col sm:flex-row items-center justify-center gap-4 pointer-events-none w-full px-4">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col sm:flex-row items-center justify-center gap-3 pointer-events-none w-full px-4">
         <button
           onClick={onAnalyze}
           disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
-          className="pointer-events-auto w-full sm:w-auto px-6 py-2.5 bg-white/60 backdrop-blur-md border border-slate-200/50 hover:bg-white/70 disabled:bg-slate-50/50 text-slate-800 disabled:text-slate-400 text-sm font-semibold rounded-2xl transition-all active:scale-[0.99] flex items-center justify-center space-x-2 focus:outline-none shadow-lg cursor-pointer disabled:cursor-not-allowed"
+          className="pointer-events-auto w-full sm:w-auto px-4 py-2 bg-white/40 backdrop-blur-md border border-slate-200/40 hover:bg-white/50 disabled:bg-slate-50/40 text-slate-800 disabled:text-slate-400 text-xs font-semibold rounded-xl transition-all active:scale-[0.99] flex items-center justify-center space-x-1.5 focus:outline-none shadow-md cursor-pointer disabled:cursor-not-allowed"
         >
           {isAnalyzing ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-500" />
               <span>Analyzing...</span>
             </>
           ) : (
             <>
-              <BarChart3 className="w-4 h-4 text-violet-500" />
+              <BarChart3 className="w-3.5 h-3.5 text-violet-500" />
               <span>Analyze Prompt</span>
             </>
           )}
@@ -264,16 +264,16 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
         <button
           onClick={onGenerate}
           disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
-          className="pointer-events-auto w-full sm:w-auto px-6 py-2.5 bg-violet-600/50 backdrop-blur-md border border-violet-500/30 hover:bg-violet-600/60 disabled:bg-slate-300/50 text-white disabled:text-slate-200 text-sm font-bold rounded-2xl transition-all shadow-lg active:scale-[0.99] flex items-center justify-center space-x-2 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
+          className="pointer-events-auto w-full sm:w-auto px-4 py-2 bg-violet-600/40 backdrop-blur-md border border-violet-500/20 hover:bg-violet-600/50 disabled:bg-slate-300/40 text-white disabled:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-md active:scale-[0.99] flex items-center justify-center space-x-1.5 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
               <span>Optimizing...</span>
             </>
           ) : (
             <>
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Optimize Prompt</span>
             </>
           )}
