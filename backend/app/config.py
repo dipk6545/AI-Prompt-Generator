@@ -9,6 +9,7 @@ class Settings:
     MISTRAL_API_KEY: str = os.getenv("MISTRAL_API_KEY", "")
     CEREBRAS_API_KEY: str = os.getenv("CEREBRAS_API_KEY", "")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
     
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "admin123")
     

@@ -116,6 +116,29 @@ async def call_gemini(prompt: str, api_key: str) -> str:
         except (KeyError, IndexError) as e:
             raise Exception(f"Failed to parse Gemini response: {response.text}")
 
+async def call_openrouter(prompt: str, api_key: str) -> str:
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "https://github.com/dipk6545/AI-Prompt-Generator.git",
+        "X-OpenRouter-Title": "PromptCraft AI",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "qwen/qwen3.6-plus",
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Optimize this prompt:\n\n{prompt}"}
+        ],
+        "temperature": 0.5
+    }
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+        if response.status_code != 200:
+            raise Exception(f"OpenRouter API error ({response.status_code}): {response.text}")
+        result = response.json()
+        return result["choices"][0]["message"]["content"].strip()
+
 async def optimize_prompt_llm(provider: str, prompt: str, api_key: str) -> str:
     prov_upper = provider.upper()
     if prov_upper == "GROQ":
@@ -126,6 +149,8 @@ async def optimize_prompt_llm(provider: str, prompt: str, api_key: str) -> str:
         return await call_cerebras(prompt, api_key)
     elif prov_upper == "GEMINI":
         return await call_gemini(prompt, api_key)
+    elif prov_upper == "OPENROUTER":
+        return await call_openrouter(prompt, api_key)
     else:
         raise ValueError(f"Unsupported provider: {provider}")
 

@@ -14,7 +14,7 @@ interface HeaderProps {
   onToggleAdmin: (active: boolean) => void;
 }
 
-const PROVIDERS = ['GROQ', 'MISTRAL', 'CEREBRAS', 'GEMINI'];
+const PROVIDERS = ['GROQ', 'MISTRAL', 'CEREBRAS', 'GEMINI', 'OPENROUTER'];
 
 export const Header: React.FC<HeaderProps> = ({
   provider,

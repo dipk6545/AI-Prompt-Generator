@@ -33,6 +33,8 @@ def get_server_key(provider: str) -> str:
         return settings.CEREBRAS_API_KEY
     elif prov_upper == "GEMINI":
         return settings.GEMINI_API_KEY
+    elif prov_upper == "OPENROUTER":
+        return settings.OPENROUTER_API_KEY
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
