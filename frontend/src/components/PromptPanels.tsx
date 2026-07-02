@@ -89,14 +89,14 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
 
         {/* Left Column - Split: Top Input, Bottom Output, Report, Diff */}
-        <div className="h-full overflow-y-auto pr-1 pb-16">
-          <div 
-            className="grid gap-4 min-h-full"
-            style={{ gridTemplateRows: 'minmax(150px, 3fr) minmax(250px, 7fr) auto auto' }}
-          >
+        <div className="h-full overflow-y-auto pr-1">
+          <div className="flex flex-col gap-4 min-h-full">
+            
+            {/* Grid wrapper for Input & Output to ensure they take 100% height when no report/diff is present */}
+            <div className="flex-1 grid gap-4 min-h-0" style={{ gridTemplateRows: '3fr 7fr' }}>
 
-          {/* Top Panel - Input */}
-          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all">
+              {/* Top Panel - Input */}
+              <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-violet-500" />
@@ -115,8 +115,8 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
             />
           </div>
 
-          {/* Bottom Panel - Optimized Prompt Output Section */}
-          <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            {/* Bottom Panel - Optimized Prompt Output Section */}
+            <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -161,19 +161,26 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
                 </span>
               </div>
             </div>
-            <textarea
-              value={optimizedPrompt}
-              readOnly
-              placeholder="Your optimized prompt will appear here after generation..."
-              className="flex-1 w-full p-5 bg-slate-50/30 text-slate-800 placeholder-slate-400 focus:outline-none resize-none text-sm leading-relaxed font-normal min-h-[150px]"
-            />
-          </div>
+              <textarea
+                value={optimizedPrompt}
+                readOnly
+                placeholder="Your optimized prompt will appear here after generation..."
+                className="flex-1 w-full pt-5 px-5 pb-20 bg-slate-50/30 text-slate-800 placeholder-slate-400 focus:outline-none resize-none text-sm leading-relaxed font-normal"
+              />
+            </div>
 
-          {/* Optimization Report & Diff View */}
-          <OptimizationReportCard report={optimizationReport} />
-          <PromptDiffViewer diffText={promptDiff} />
-          </div>
-        </div>
+            </div> {/* grid wrapper close */}
+
+            {/* Optimization Report & Diff View */}
+            <OptimizationReportCard report={optimizationReport} />
+            <PromptDiffViewer diffText={promptDiff} />
+
+            {/* Bottom spacer to clear the floating buttons when scrolled */}
+            {(optimizationReport.length > 0 || promptDiff) && (
+              <div className="h-20 shrink-0" />
+            )}
+          </div> {/* inner wrapper close */}
+        </div> {/* outer scroll wrapper close */}
 
         {/* Right Column - Analysis Section */}
         <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full min-h-[500px]">
