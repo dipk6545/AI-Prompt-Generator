@@ -73,7 +73,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col p-4 pb-16 gap-4 overflow-y-auto min-h-0 mb-3">
+    <div className="flex-1 flex flex-col p-4 pb-16 gap-4 min-h-0 mb-3">
       {/* Error Banner */}
       {errorMsg && (
         <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-800 text-sm animate-shake">
@@ -89,7 +89,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
 
         {/* Left Column - Split: Top Input, Bottom Output, Report, Diff */}
-        <div className="flex flex-col gap-4 h-full">
+        <div className="flex flex-col gap-4 h-full overflow-y-auto pr-1 pb-16">
 
           {/* Top Panel - Input */}
           <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all flex-1 min-h-[250px]">
