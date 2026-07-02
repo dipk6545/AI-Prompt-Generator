@@ -242,7 +242,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       </div>
 
       {/* Floating Action Buttons Panel */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col sm:flex-row items-center justify-center gap-3 pointer-events-none w-full px-4">
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col sm:flex-row items-center justify-center gap-3 pointer-events-none w-full px-4">
         <button
           onClick={onAnalyze}
           disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
