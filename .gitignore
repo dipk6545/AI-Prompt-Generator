@@ -1,0 +1,26 @@
+# Dependency directories
+node_modules/
+frontend/node_modules/
+frontend/dist/
+backend/venv/
+backend/.venv/
+
+# Environment files (contains secrets!)
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Python cache and builds
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/app/__pycache__/
+backend/app/schemas/__pycache__/
+backend/app/services/__pycache__/
+
+# IDEs and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
