@@ -73,7 +73,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col p-4 pb-16 gap-4 min-h-0 mb-3">
+    <div className="flex-1 flex flex-col p-4 gap-4 min-h-0">
       {/* Error Banner */}
       {errorMsg && (
         <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-800 text-sm animate-shake">
@@ -183,7 +183,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
             </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-5 min-h-0">
+          <div className="flex-1 overflow-y-auto p-5 pb-16 space-y-5 min-h-0">
             {isAnalyzing ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-3">
                 <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
