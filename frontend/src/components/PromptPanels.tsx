@@ -56,7 +56,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
   onAnalyze,
 }) => {
   return (
-    <div className="flex-1 flex flex-col p-4 gap-4 overflow-y-auto min-h-0">
+    <div className="flex-1 flex flex-col p-4 pb-28 gap-4 overflow-y-auto min-h-0">
       {/* Error Banner */}
       {errorMsg && (
         <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-800 text-sm animate-shake">
@@ -72,7 +72,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
         
         {/* Left Column - Split: Top Input, Bottom Output */}
-        <div className="flex flex-col gap-4 min-h-0">
+        <div className="flex flex-col gap-4 h-full min-h-0">
           
           {/* Top Panel - Input */}
           <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all min-h-[250px]">
@@ -137,7 +137,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
         </div>
 
         {/* Right Column - Analysis Section */}
-        <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+        <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full min-h-[500px]">
           <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
             <div className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4 text-violet-500" />
@@ -241,8 +241,8 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons Panel */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2 shrink-0">
+      {/* Floating Action Buttons Panel */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col sm:flex-row items-center justify-center gap-4 bg-white/90 backdrop-blur-lg px-6 py-4 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-200/60 w-[95%] max-w-2xl">
         <button
           onClick={onAnalyze}
           disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
