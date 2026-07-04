@@ -19,6 +19,80 @@ class PromptAnalyzer:
             ClarityRule()
         ]
 
+    def detect_category(self, prompt: str) -> str:
+        prompt_lower = prompt.lower()
+        if any(kw in prompt_lower for kw in ["code", "function", "script", "python", "javascript", "react", "html", "css", "bug", "debug", "api", "endpoint"]):
+            return "Coding"
+        if any(kw in prompt_lower for kw in ["system design", "architecture", "microservices", "database schema", "scalability", "infrastructure"]):
+            return "System Design"
+        if any(kw in prompt_lower for kw in ["machine learning", "dataset", "train model", "neural network", "predict", "classification", "regression"]):
+            return "Machine Learning"
+        if any(kw in prompt_lower for kw in ["resume", "cover letter", "cv", "portfolio"]):
+            return "Resume"
+        if any(kw in prompt_lower for kw in ["marketing", "seo", "campaign", "social media", "tweet", "brand"]):
+            return "Marketing"
+        if any(kw in prompt_lower for kw in ["business plan", "strategy", "executive summary", "b2b", "b2c", "startup"]):
+            return "Business"
+        if any(kw in prompt_lower for kw in ["sql", "query", "select *", "join", "group by", "database"]):
+            return "SQL"
+        if any(kw in prompt_lower for kw in ["teach me", "explain like", "tutor", "learn", "course", "lesson"]):
+            return "Education"
+        if any(kw in prompt_lower for kw in ["poem", "creative", "fiction", "character", "world building", "story"]):
+            return "Creative Writing"
+        if any(kw in prompt_lower for kw in ["write an essay", "blog post", "article", "copywrite", "rewrite", "summarize"]):
+            return "Writing"
+        return "General"
+
+    def detect_missing_info(self, prompt: str, category: str) -> List[str]:
+        missing = []
+        prompt_lower = prompt.lower()
+        
+        # General missing info checks
+        if "audience" not in prompt_lower and "target" not in prompt_lower and "users" not in prompt_lower:
+            missing.append("Target Audience")
+            
+        if category == "Coding":
+            if not any(kw in prompt_lower for kw in ["python", "javascript", "react", "java", "c++", "go", "rust", "typescript", "node", "sql"]):
+                missing.append("Technology Stack")
+        elif category == "System Design":
+            if "scale" not in prompt_lower and "users" not in prompt_lower and "traffic" not in prompt_lower:
+                missing.append("Expected Scale")
+            if "latency" not in prompt_lower and "performance" not in prompt_lower and "throughput" not in prompt_lower:
+                missing.append("Performance Requirements")
+        elif category == "Writing" or category == "Creative Writing":
+            if "tone" not in prompt_lower and "style" not in prompt_lower:
+                missing.append("Tone of Voice")
+        elif category == "Business":
+            if "budget" not in prompt_lower and "timeline" not in prompt_lower:
+                missing.append("Business Constraints (e.g. Budget, Timeline)")
+        elif category == "Machine Learning":
+            if "dataset" not in prompt_lower and "data" not in prompt_lower:
+                missing.append("Dataset Characteristics")
+                
+        return missing
+
+    def analyze_advanced(self, prompt: str) -> Dict[str, Any]:
+        """Runs the standard analysis and adds advanced metadata extraction for the Prompt Builder."""
+        base_analysis = self.analyze(prompt)
+        category = self.detect_category(prompt)
+        missing_info = self.detect_missing_info(prompt, category)
+        
+        # Heuristically determine if a role was detected
+        role_detected = False
+        for rule in self.rules:
+            if rule.name == "role_definition":
+                score, _, detected = rule.evaluate(prompt.strip())
+                if detected:
+                    role_detected = True
+                    break
+
+        return {
+            "category": category,
+            "missing_information": missing_info,
+            "role_detected": role_detected,
+            "base_analysis": base_analysis
+        }
+
     def analyze(self, prompt: str) -> PromptAnalysisResponse:
         metrics: Dict[str, MetricDetail] = {}
         scores: Dict[str, int] = {}

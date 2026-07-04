@@ -1,7 +1,8 @@
-import React from 'react';
-import { Sparkles, Copy, Check, Info, ShieldAlert, BarChart3, AlertCircle, Lightbulb, Loader2, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, Copy, Check, Info, ShieldAlert, BarChart3, AlertCircle, Lightbulb, Loader2, Download, Trash2, Plus } from 'lucide-react';
 import { OptimizationReportCard } from './OptimizationReportCard';
-import { PromptDiffViewer } from './PromptDiffViewer';
+import { PromptCraftEngine } from './PromptCraftEngine';
+import { MetadataBar } from './MetadataBar';
 
 export interface MetricDetail {
   score: number;
@@ -21,6 +22,7 @@ interface PromptPanelsProps {
   optimizedPrompt: string;
   isLoading: boolean;
   onGenerate: () => void;
+  onReset?: () => void;
   isCopied: boolean;
   onCopy: () => void;
   errorMsg: string | null;
@@ -31,6 +33,17 @@ interface PromptPanelsProps {
   onAnalyze: () => void;
   optimizationReport: any[];
   promptDiff: string;
+  advancedPrompting: boolean;
+  
+  // Tracking
+  lastAnalyzedPromptInput?: string;
+  lastOptimizedPromptInput?: string;
+
+  // PromptCraft Engine Props
+  isEngineActive?: boolean;
+  enginePayload?: any;
+  onEngineComplete?: (optimizedPrompt: string, report: any[], diff: string) => void;
+  onEngineError?: (errorMsg: string) => void;
 }
 
 const getScoreColorClass = (score: number) => {
@@ -60,7 +73,74 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
   onAnalyze,
   optimizationReport,
   promptDiff,
+  advancedPrompting,
+  lastAnalyzedPromptInput = '',
+  lastOptimizedPromptInput = '',
+  isEngineActive = false,
+  enginePayload,
+  onEngineComplete = () => {},
+  onEngineError = () => {},
+  onReset = () => {},
 }) => {
+  const [loadingStage, setLoadingStage] = React.useState(0);
+  
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea dynamically
+  React.useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      if (isEngineActive) {
+        // Active/Finished: Shrink to fit the text (no min base height)
+        const newHeight = Math.min(textareaRef.current.scrollHeight, 200);
+        textareaRef.current.style.height = `${newHeight}px`;
+      } else {
+        // Idle: Base height is 107px (makes card ~200px), grows if text exceeds it
+        const newHeight = Math.max(107, Math.min(textareaRef.current.scrollHeight, 260));
+        textareaRef.current.style.height = `${newHeight}px`;
+      }
+    } else if (textareaRef.current) {
+      textareaRef.current.style.height = '';
+    }
+  }, [originalPrompt, isEngineActive]);
+
+  // Dynamic Timer
+  
+  // Dynamic Timer
+  const [elapsedSeconds, setElapsedSeconds] = React.useState(0);
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isLoading) {
+      setElapsedSeconds(0);
+      interval = setInterval(() => {
+        setElapsedSeconds(prev => prev + 0.1);
+      }, 100);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  // Global Metadata
+  const engineMetadata = React.useRef<any>(null);
+
+  React.useEffect(() => {
+    let timers: ReturnType<typeof setTimeout>[] = [];
+    if (isLoading && advancedPrompting) {
+      setLoadingStage(0);
+      timers.push(setTimeout(() => setLoadingStage(1), 800));
+      timers.push(setTimeout(() => setLoadingStage(2), 1600));
+    } else {
+      setLoadingStage(0);
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [isLoading, advancedPrompting]);
+
+  const loadingText = advancedPrompting ? [
+    "🔍 Analyzing...",
+    "🏗 Building...",
+    "✨ Refining..."
+  ][loadingStage] : "Optimizing...";
+
+  const [isCopiedOriginal, setIsCopiedOriginal] = useState(false);
   const downloadFile = (format: 'txt' | 'md') => {
     if (!optimizedPrompt) return;
     const blob = new Blob([optimizedPrompt], { type: 'text/plain' });
@@ -72,8 +152,16 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const hasValidText = /[\p{L}\p{N}]/u.test(originalPrompt);
+
+  const isAnalyzeUpToDate = originalPrompt.trim() !== '' && originalPrompt.trim() === lastAnalyzedPromptInput.trim() && analysisData !== null;
+  const isOptimizeUpToDate = originalPrompt.trim() !== '' && originalPrompt.trim() === lastOptimizedPromptInput.trim() && (optimizedPrompt !== '' || isEngineActive);
+
+  const disableAnalyze = isLoading || isAnalyzing || !originalPrompt.trim() || isAnalyzeUpToDate;
+  const disableOptimize = isLoading || isAnalyzing || !originalPrompt.trim() || isOptimizeUpToDate;
+
   return (
-    <div className="flex-1 flex flex-col p-4 gap-4 min-h-0">
+    <div className="flex-1 flex flex-col h-full bg-slate-50/50 p-4 min-h-0">
       {/* Error Banner */}
       {errorMsg && (
         <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-800 text-sm animate-shake">
@@ -88,35 +176,83 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       {/* Panels Layout: 2 Columns */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
 
-        {/* Left Column - Split: Top Input, Bottom Output, Report, Diff */}
-        <div className="h-full overflow-y-auto pr-1">
-          <div className="flex flex-col gap-4 min-h-full">
-            
-            {/* Grid wrapper for Input & Output to ensure they take 100% height when no report/diff is present */}
-            <div className="flex-1 grid gap-4 min-h-0" style={{ gridTemplateRows: '3fr 7fr' }}>
-
-              {/* Top Panel - Input */}
-              <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 transition-all">
+        {/* Left Column - All scrollable except MetadataBar */}
+        <div className="h-full flex flex-col min-h-0 pb-2 px-1">
+          
+          {/* Unified Scrollable Container */}
+          <div className="flex-1 overflow-y-auto -mx-2 px-2 -my-1.5 py-1.5 flex flex-col gap-4 min-h-0">
+          
+          {/* Top Panel - Input */}
+          <div className={`flex flex-col bg-white rounded-2xl border border-slate-100 shadow-md overflow-hidden transition-all shrink-0 ${
+            isEngineActive 
+              ? 'h-auto' 
+              : 'group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 min-h-[200px]'
+          }`}>
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-violet-500" />
                 <h2 className="text-sm font-bold text-slate-700 m-0">Original Prompt</h2>
               </div>
-              <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                Input
-              </span>
+              <div className="flex items-center gap-2">
+                {originalPrompt && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={onReset}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-violet-100 hover:bg-violet-200 text-violet-700 text-xs font-semibold rounded-lg transition-all"
+                      title="New Prompt"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>New Prompt</span>
+                    </button>
+                    <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(originalPrompt);
+                      setIsCopiedOriginal(true);
+                      setTimeout(() => setIsCopiedOriginal(false), 1500);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-all"
+                    title="Copy to Clipboard"
+                  >
+                    {isCopiedOriginal ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-700">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                    </button>
+                  </div>
+                )}
+                <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                  Input
+                </span>
+              </div>
             </div>
             <textarea
+              ref={textareaRef}
               value={originalPrompt}
               onChange={(e) => setOriginalPrompt(e.target.value)}
               placeholder="Enter your prompt here..."
-              className="flex-1 w-full p-5 text-slate-800 placeholder-slate-400 focus:outline-none resize-none text-sm leading-relaxed"
+              className="w-full p-5 text-slate-800 placeholder-slate-400 focus:outline-none resize-none text-sm leading-relaxed h-auto overflow-y-auto"
               disabled={isLoading || isAnalyzing}
             />
           </div>
 
+            {/* PromptCraft Engine (Middle) */}
+            <PromptCraftEngine 
+              isActive={isEngineActive}
+              payload={enginePayload}
+              onComplete={onEngineComplete}
+              onError={onEngineError}
+              onMetadataUpdate={(meta) => { engineMetadata.current = meta; }}
+            />
+
             {/* Bottom Panel - Optimized Prompt Output Section */}
-            <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-md overflow-hidden min-h-[160px] flex-1 shrink-0">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -169,21 +305,40 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
               />
             </div>
 
-            </div> {/* grid wrapper close */}
-
-            {/* Optimization Report & Diff View */}
+            {/* grid wrapper closed previously */}
+            {/* Optimization Report */}
             <OptimizationReportCard report={optimizationReport} />
-            <PromptDiffViewer diffText={promptDiff} />
 
             {/* Bottom spacer to clear the floating buttons when scrolled */}
-            {(optimizationReport.length > 0 || promptDiff) && (
+            {(optimizationReport.length > 0) && (
               <div className="h-20 shrink-0" />
             )}
-          </div> {/* inner wrapper close */}
-        </div> {/* outer scroll wrapper close */}
+          </div>
+
+          {/* Global MetadataBar anchored to the bottom of the left column */}
+          {(isLoading || optimizedPrompt) && (
+            <div className="mt-3 bg-white border border-slate-100 shadow-md rounded-xl overflow-hidden shrink-0">
+              <MetadataBar 
+                metadata={
+                  enginePayload ? {
+                    ...(engineMetadata.current || {}),
+                    elapsed_time: `${elapsedSeconds.toFixed(1)}s`,
+                    provider: enginePayload.provider,
+                    model: enginePayload.ollama_model || enginePayload.provider,
+                    optimization_level: enginePayload.optimization_level,
+                    technique: enginePayload.technique
+                  } : {
+                    elapsed_time: `${elapsedSeconds.toFixed(1)}s`,
+                    optimization_mode: advancedPrompting ? 'Advanced Prompting' : 'Standard Optimization',
+                  }
+                } 
+              />
+            </div>
+          )}
+        </div> {/* Left Column close */}
 
         {/* Right Column - Analysis Section */}
-        <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full min-h-[500px]">
+        <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-md overflow-hidden flex flex-col h-full min-h-[500px]">
           <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
             <div className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4 text-violet-500" />
@@ -288,46 +443,49 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
       </div>
 
       {/* Floating Action Buttons Panel */}
-      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center justify-center gap-3 pointer-events-none w-full px-4">
-        
-        <div className="flex flex-col sm:flex-row gap-3 pointer-events-none">
-          <button
-            onClick={onAnalyze}
-            disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
-            className="pointer-events-auto w-full sm:w-auto px-3 py-1.5 bg-white/40 backdrop-blur-md border border-slate-200/40 hover:bg-white/50 disabled:bg-slate-50/40 text-slate-800 disabled:text-slate-400 text-[11px] font-semibold rounded-lg transition-all active:scale-[0.99] flex items-center justify-center space-x-1 focus:outline-none shadow-md cursor-pointer disabled:cursor-not-allowed"
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="w-3 h-3 animate-spin text-violet-500" />
-                <span>Analyzing...</span>
-              </>
-            ) : (
-              <>
-                <BarChart3 className="w-3 h-3 text-violet-500" />
-                <span>Analyze Prompt</span>
-              </>
-            )}
-          </button>
+      {hasValidText && (
+        <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center justify-center gap-2 pointer-events-none w-full px-4">
+          {/* Removed floating Engine Enabled label */}
+          
+          <div className="flex flex-col sm:flex-row gap-3 pointer-events-none">
+            <button
+              onClick={onAnalyze}
+              disabled={disableAnalyze}
+              className="pointer-events-auto w-full sm:w-auto px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:bg-slate-100 text-slate-800 disabled:text-slate-400 text-[11px] font-semibold rounded-lg transition-all active:scale-[0.99] flex items-center justify-center space-x-1 focus:outline-none shadow-md cursor-pointer disabled:cursor-not-allowed"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin text-violet-500" />
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <BarChart3 className="w-3 h-3 text-violet-500" />
+                  <span>Analyze Prompt</span>
+                </>
+              )}
+            </button>
 
-          <button
-            onClick={onGenerate}
-            disabled={isLoading || isAnalyzing || !originalPrompt.trim()}
-            className="pointer-events-auto w-full sm:w-auto px-3 py-1.5 bg-violet-600/40 backdrop-blur-md border border-violet-500/20 hover:bg-violet-600/50 disabled:bg-slate-300/40 text-white disabled:text-slate-200 text-[11px] font-bold rounded-lg transition-all shadow-md active:scale-[0.99] flex items-center justify-center space-x-1 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-3 h-3 animate-spin text-white" />
-                <span>Optimizing...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-3 h-3" />
-                <span>Optimize Prompt</span>
-              </>
-            )}
-          </button>
+            <button
+              onClick={onGenerate}
+              disabled={disableOptimize}
+              className="pointer-events-auto w-full sm:w-auto px-3 py-1.5 bg-violet-500 border border-violet-600 hover:bg-violet-600 disabled:bg-slate-300 text-white disabled:text-slate-200 text-[11px] font-bold rounded-lg transition-all shadow-md active:scale-[0.99] flex items-center justify-center space-x-1 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin text-white" />
+                  <span>{loadingText}</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3 h-3" />
+                  <span>Optimize Prompt</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

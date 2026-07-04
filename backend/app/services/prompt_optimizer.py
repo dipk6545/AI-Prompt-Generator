@@ -11,8 +11,8 @@ async def enhance_prompt(payload: OptimizePromptRequestV2, api_key: str) -> Opti
     """
     Main orchestration function for Phase 3 Prompt Enhancement Engine.
     """
-    # 1. Get the structured system prompt based on Level and Technique
-    system_prompt = get_enhancement_system_prompt(payload.optimization_level, payload.technique)
+    # 1. Get the structured system prompt based on Level, Technique, and Provider
+    system_prompt = get_enhancement_system_prompt(payload.optimization_level, payload.technique, payload.provider)
     
     # 2. Call the LLM
     raw_response = await optimize_prompt_llm(
@@ -22,19 +22,27 @@ async def enhance_prompt(payload: OptimizePromptRequestV2, api_key: str) -> Opti
         system_prompt=system_prompt
     )
     
-    # 3. Parse JSON from LLM
+    # 3. Parse JSON from LLM — robust extraction
     try:
-        # LLM might wrap in markdown blocks like ```json ... ```
-        clean_json = raw_response.strip()
-        if clean_json.startswith("```json"):
-            clean_json = clean_json[7:]
-        if clean_json.endswith("```"):
-            clean_json = clean_json[:-3]
-        clean_json = clean_json.strip()
-            
-        data = json.loads(clean_json)
+        clean = raw_response.strip()
         
-        optimized_prompt = data.get("optimized_prompt", payload.prompt)
+        # Strip markdown code fences in any position
+        # Handle ```json ... ``` or ``` ... ``` anywhere in the response
+        import re
+        fence_match = re.search(r'```(?:json)?\s*(\{.*\})\s*```', clean, re.DOTALL)
+        if fence_match:
+            clean = fence_match.group(1).strip()
+        else:
+            # No fences — try to find the first { ... } JSON object
+            brace_start = clean.find('{')
+            brace_end = clean.rfind('}')
+            if brace_start != -1 and brace_end > brace_start:
+                clean = clean[brace_start:brace_end + 1]
+            
+        data = json.loads(clean, strict=False)
+        
+        from app.services.prompt_formatter import format_optimized_prompt
+        optimized_prompt = format_optimized_prompt(data.get("optimized_prompt", payload.prompt))
         report_data = data.get("optimization_report", [])
         
         # Parse report items
@@ -47,10 +55,11 @@ async def enhance_prompt(payload: OptimizePromptRequestV2, api_key: str) -> Opti
                 )
             )
             
-    except json.JSONDecodeError as e:
+    except (json.JSONDecodeError, Exception) as e:
         logger.error(f"Failed to parse LLM JSON response: {e}\nRaw Response: {raw_response}")
         # Fallback if the LLM didn't return valid JSON
-        optimized_prompt = raw_response
+        from app.services.prompt_formatter import format_optimized_prompt
+        optimized_prompt = format_optimized_prompt(raw_response)
         report_items = [
             OptimizationReportItem(
                 change="General Enhancement",

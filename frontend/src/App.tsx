@@ -7,7 +7,12 @@ import { encryptData, decryptData } from './utils/crypto';
 const API_BASE_URL = 'http://127.0.0.1:8080';
 
 function App() {
-  const [provider, setProvider] = useState('GROQ');
+  const [provider, setProvider] = useState(() => localStorage.getItem('promptcraft_provider') || 'GROQ');
+  
+  useEffect(() => {
+    localStorage.setItem('promptcraft_provider', provider);
+  }, [provider]);
+
   const [useServerKey, setUseServerKey] = useState(true);
   const [userKeys, setUserKeys] = useState<Record<string, string>>({});
   
@@ -15,6 +20,15 @@ function App() {
   const [optimizedPrompt, setOptimizedPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  // PromptCraft Engine State
+  const [isEngineActive, setIsEngineActive] = useState(false);
+  const [isEngineRunning, setIsEngineRunning] = useState(false);
+  const [enginePayload, setEnginePayload] = useState<any>(null);
+
+  // Track the original prompt text to prevent redundant requests
+  const [lastAnalyzedPromptInput, setLastAnalyzedPromptInput] = useState('');
+  const [lastOptimizedPromptInput, setLastOptimizedPromptInput] = useState('');
   
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
@@ -29,6 +43,21 @@ function App() {
   // New Analysis State
   const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [ollamaModel, setOllamaModel] = useState<string>(() => localStorage.getItem('promptcraft_ollama_model') || '');
+
+  // Advanced Prompting Toggle
+  const [advancedPrompting, setAdvancedPrompting] = useState<boolean>(() => {
+    const saved = localStorage.getItem('promptcraft_advanced_prompting');
+    return saved === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('promptcraft_advanced_prompting', advancedPrompting.toString());
+  }, [advancedPrompting]);
+
+  useEffect(() => {
+    localStorage.setItem('promptcraft_ollama_model', ollamaModel);
+  }, [ollamaModel]);
 
   // Initialize and load saved keys & admin session
   useEffect(() => {
@@ -132,6 +161,7 @@ function App() {
 
       const data = await response.json();
       setAnalysisData(data);
+      setLastAnalyzedPromptInput(originalPrompt);
     } catch (error: any) {
       console.error('Analysis error:', error);
       setErrorMsg(error.message || 'An error occurred while communicating with the analysis server.');
@@ -159,6 +189,18 @@ function App() {
     setIsLoading(true);
 
     try {
+      // Create Payload
+      const payload = {
+        prompt: originalPrompt,
+        provider: provider,
+        api_key: useServerKey ? null : targetKey,
+        use_server_key: useServerKey,
+        optimization_level: optimizationLevel,
+        technique: optimizationTechnique,
+        advanced_prompting: advancedPrompting,
+        ...(provider === 'OLLAMA' && ollamaModel ? { ollama_model: ollamaModel } : {})
+      };
+
       // Automatically run analysis alongside optimization for unified data update
       const analyzeResponse = await fetch(`${API_BASE_URL}/api/analyze-prompt`, {
         method: 'POST',
@@ -168,36 +210,34 @@ function App() {
       if (analyzeResponse.ok) {
         const analyzeData = await analyzeResponse.json();
         setAnalysisData(analyzeData);
+        setLastAnalyzedPromptInput(originalPrompt);
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/optimize-prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: originalPrompt,
-          provider: provider,
-          api_key: useServerKey ? null : targetKey,
-          use_server_key: useServerKey,
-          optimization_level: optimizationLevel,
-          technique: optimizationTechnique
-        }),
-      });
+      // STREAMING: Offload to PromptCraftEngine component for both modes
+      setEnginePayload(payload);
+      setIsEngineActive(true);
+      setIsEngineRunning(true);
+      setLastOptimizedPromptInput(originalPrompt);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to optimize prompt.');
-      }
-
-      const data = await response.json();
-      setOptimizedPrompt(data.optimized_prompt);
-      setOptimizationReport(data.optimization_report || []);
-      setPromptDiff(data.diff || '');
     } catch (error: any) {
       console.error('Optimization error:', error);
       setErrorMsg(error.message || 'An error occurred while communicating with the server.');
-    } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleReset = () => {
+    setOriginalPrompt('');
+    setOptimizedPrompt('');
+    setOptimizationReport([]);
+    setPromptDiff('');
+    setAnalysisData(null);
+    setErrorMsg(null);
+    setIsEngineActive(false);
+    setEnginePayload(null);
+    setIsEngineRunning(false);
+    setLastAnalyzedPromptInput('');
+    setLastOptimizedPromptInput('');
   };
 
   const handleCopy = () => {
@@ -224,6 +264,10 @@ function App() {
         setOptimizationLevel={setOptimizationLevel}
         optimizationTechnique={optimizationTechnique}
         setOptimizationTechnique={setOptimizationTechnique}
+        ollamaModel={ollamaModel}
+        setOllamaModel={setOllamaModel}
+        advancedPrompting={advancedPrompting}
+        setAdvancedPrompting={setAdvancedPrompting}
       />
 
       {/* Main Panels Workspace */}
@@ -231,8 +275,9 @@ function App() {
         originalPrompt={originalPrompt}
         setOriginalPrompt={setOriginalPrompt}
         optimizedPrompt={optimizedPrompt}
-        isLoading={isLoading}
+        isLoading={isLoading || isEngineRunning}
         onGenerate={handleGenerate}
+        onReset={handleReset}
         isCopied={isCopied}
         onCopy={handleCopy}
         errorMsg={errorMsg}
@@ -241,6 +286,23 @@ function App() {
         onAnalyze={handleAnalyze}
         optimizationReport={optimizationReport}
         promptDiff={promptDiff}
+        advancedPrompting={advancedPrompting}
+        isEngineActive={isEngineActive}
+        enginePayload={enginePayload}
+        lastAnalyzedPromptInput={lastAnalyzedPromptInput}
+        lastOptimizedPromptInput={lastOptimizedPromptInput}
+        onEngineComplete={(opt, report, diff) => {
+          setOptimizedPrompt(opt);
+          setOptimizationReport(report || []);
+          setPromptDiff(diff || '');
+          setIsEngineRunning(false);
+          setIsLoading(false);
+        }}
+        onEngineError={(msg) => {
+          setErrorMsg(msg);
+          setIsEngineRunning(false);
+          setIsLoading(false);
+        }}
       />
 
       {/* Admin Authorization Modal */}

@@ -14,7 +14,7 @@ export const OptimizationReportCard: React.FC<OptimizationReportCardProps> = ({ 
   if (!report || report.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mt-4">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-md p-5 mt-4">
       <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
         Optimization Report
       </h3>

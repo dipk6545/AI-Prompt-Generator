@@ -28,12 +28,12 @@ async def call_groq(prompt: str, api_key: str, system_prompt: Optional[str] = No
         "temperature": 0.5
     }
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+        response = await client.post(url, json=payload, headers=headers, timeout=90.0)
         if response.status_code != 200:
             # Try a fallback model just in case
             if "model_not_found" in response.text:
                 payload["model"] = "llama-3.1-8b-instant"
-                response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+                response = await client.post(url, json=payload, headers=headers, timeout=90.0)
             
             if response.status_code != 200:
                 raise Exception(f"GROQ API error ({response.status_code}): {response.text}")
@@ -59,11 +59,11 @@ async def call_mistral(prompt: str, api_key: str, system_prompt: Optional[str] =
         "temperature": 0.5
     }
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+        response = await client.post(url, json=payload, headers=headers, timeout=90.0)
         if response.status_code != 200:
             # Fallback model
-            payload["model"] = "open-mistral-7b"
-            response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+            payload["model"] = "mistral-small-latest"
+            response = await client.post(url, json=payload, headers=headers, timeout=90.0)
             if response.status_code != 200:
                 raise Exception(f"Mistral API error ({response.status_code}): {response.text}")
         result = response.json()
@@ -79,7 +79,7 @@ async def call_cerebras(prompt: str, api_key: str, system_prompt: Optional[str] 
     sys_prompt = system_prompt if system_prompt else SYSTEM_PROMPT
     
     payload = {
-        "model": "llama3.1-70b",
+        "model": "gpt-oss-120b",
         "messages": [
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": f"Optimize this prompt:\n\n{prompt}"}
@@ -87,11 +87,11 @@ async def call_cerebras(prompt: str, api_key: str, system_prompt: Optional[str] 
         "temperature": 0.5
     }
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+        response = await client.post(url, json=payload, headers=headers, timeout=90.0)
         if response.status_code != 200:
-            # Try 8b fallback
-            payload["model"] = "llama3.1-8b"
-            response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+            # Try gemma fallback
+            payload["model"] = "gemma-4-31b"
+            response = await client.post(url, json=payload, headers=headers, timeout=90.0)
             if response.status_code != 200:
                 raise Exception(f"Cerebras API error ({response.status_code}): {response.text}")
         result = response.json()
@@ -120,7 +120,7 @@ async def call_gemini(prompt: str, api_key: str, system_prompt: Optional[str] = 
         }
     }
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+        response = await client.post(url, json=payload, headers=headers, timeout=90.0)
         if response.status_code != 200:
             raise Exception(f"Gemini API error ({response.status_code}): {response.text}")
         result = response.json()
@@ -150,7 +150,7 @@ async def call_openrouter(prompt: str, api_key: str, system_prompt: Optional[str
         "max_tokens": 2048
     }
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+        response = await client.post(url, json=payload, headers=headers, timeout=90.0)
         if response.status_code != 200:
             raise Exception(f"OpenRouter API error ({response.status_code}): {response.text}")
         result = response.json()

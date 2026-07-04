@@ -24,13 +24,13 @@ export const OptimizationOptions: React.FC<OptimizationOptionsProps> = ({
       {/* Level Dropdown */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+          <label htmlFor="optimization-level-select" className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-600 transition-colors">
             Optimization Level
           </label>
           <button
             type="button"
             onClick={() => setShowLevelModal(true)}
-            className="p-0.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-violet-600 transition-colors"
+            className="p-0.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-violet-600 transition-colors cursor-pointer"
             title="Explain Levels"
           >
             <Info className="w-3.5 h-3.5" />
@@ -38,10 +38,11 @@ export const OptimizationOptions: React.FC<OptimizationOptionsProps> = ({
         </div>
         <div className="relative">
           <select
+            id="optimization-level-select"
             disabled={disabled}
             value={optimizationLevel}
             onChange={(e) => setOptimizationLevel(e.target.value)}
-            className="h-10 w-40 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all cursor-pointer appearance-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-10 w-40 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all cursor-pointer appearance-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
           >
             <option value="Basic">Basic Level</option>
             <option value="Professional">Professional Level</option>
@@ -54,13 +55,13 @@ export const OptimizationOptions: React.FC<OptimizationOptionsProps> = ({
       {/* Technique Dropdown */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+          <label htmlFor="technique-select" className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-600 transition-colors">
             Technique
           </label>
           <button
             type="button"
             onClick={() => setShowTechniqueModal(true)}
-            className="p-0.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-violet-600 transition-colors"
+            className="p-0.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-violet-600 transition-colors cursor-pointer"
             title="Explain Techniques"
           >
             <Info className="w-3.5 h-3.5" />
@@ -68,10 +69,11 @@ export const OptimizationOptions: React.FC<OptimizationOptionsProps> = ({
         </div>
         <div className="relative">
           <select
+            id="technique-select"
             disabled={disabled}
             value={optimizationTechnique}
             onChange={(e) => setOptimizationTechnique(e.target.value)}
-            className="h-10 w-44 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all cursor-pointer appearance-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-10 w-44 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all cursor-pointer appearance-none pr-8 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
           >
             <option value="Auto Detect">Auto Detect</option>
             <option value="Role Prompting">Role Prompting</option>
