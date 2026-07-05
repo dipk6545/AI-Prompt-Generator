@@ -16,6 +16,7 @@ const V2App: React.FC<V2AppProps> = ({ onBackToHome }) => {
 
 
   const [useServerKey, setUseServerKey] = useState(true);
+  const [selectedProvider, setSelectedProvider] = useState('OPENROUTER');
   const [userKeys, setUserKeys] = useState<Record<string, string>>({});
   const [showApiModal, setShowApiModal] = useState(false);
   
@@ -174,10 +175,8 @@ const V2App: React.FC<V2AppProps> = ({ onBackToHome }) => {
 
     // Check credentials
     const effectiveUseServerKey = isAdmin && useServerKey;
-    // In V2, we require at least one provider key if not using server key.
-    // For simplicity, we'll just check if any key is present.
-    if (!effectiveUseServerKey && Object.keys(userKeys).length === 0) {
-      setErrorMsg('API Key not available. Please provide an API key.');
+    if (!effectiveUseServerKey && !userKeys[selectedProvider]) {
+      setErrorMsg(`API Key not available. Please configure your API key for ${selectedProvider}.`);
       setShowApiModal(true);
       return;
     }
@@ -195,7 +194,7 @@ const V2App: React.FC<V2AppProps> = ({ onBackToHome }) => {
         technique: advancedPrompting ? optimizationTechnique : 'Auto Detect',
         marketing_framework: advancedPrompting ? marketingFramework : 'Auto Detect',
         advanced_prompting: advancedPrompting,
-        provider: 'OPENROUTER' // default to openrouter or whatever is available
+        provider: selectedProvider
       };
 
       const response = await fetch(`${API_BASE_URL}/api/optimize-prompt`, {
@@ -265,6 +264,8 @@ const V2App: React.FC<V2AppProps> = ({ onBackToHome }) => {
         setMarketingFramework={setMarketingFramework}
         advancedPrompting={advancedPrompting}
         setAdvancedPrompting={setAdvancedPrompting}
+        selectedProvider={selectedProvider}
+        setSelectedProvider={setSelectedProvider}
       />
 
       {/* Main Panels Workspace */}

@@ -22,6 +22,8 @@ interface HeaderProps {
   marketingFramework: string;
   setMarketingFramework: (framework: string) => void;
   onBackToHome?: () => void;
+  selectedProvider?: string;
+  setSelectedProvider?: (provider: string) => void;
 }
 
 const PROVIDERS = ['GROQ', 'MISTRAL', 'CEREBRAS', 'GEMINI', 'OPENROUTER'];
@@ -44,7 +46,9 @@ export const Header: React.FC<HeaderProps> = ({
   setMarketingFramework,
   advancedPrompting,
   setAdvancedPrompting,
-  onBackToHome
+  onBackToHome,
+  selectedProvider,
+  setSelectedProvider
 }) => {
   const [editKeys, setEditKeys] = useState<Record<string, string>>({});
   const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
@@ -96,7 +100,19 @@ export const Header: React.FC<HeaderProps> = ({
               Active Providers
             </span>
             <div className="mt-1 flex gap-2 h-9 items-center">
-              {useServerKey ? (
+              {setSelectedProvider && selectedProvider ? (
+                <select
+                  value={selectedProvider}
+                  onChange={(e) => setSelectedProvider(e.target.value)}
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-700 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm cursor-pointer"
+                >
+                  {PROVIDERS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              ) : useServerKey ? (
                 <span className="px-2 py-1 bg-violet-100 text-violet-700 text-xs font-semibold rounded-md border border-violet-200">All Available</span>
               ) : (
                 Object.keys(userKeys).length > 0 ? (

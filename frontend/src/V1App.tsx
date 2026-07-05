@@ -16,6 +16,7 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
 
 
   const [useServerKey, setUseServerKey] = useState(true);
+  const [selectedProvider, setSelectedProvider] = useState('OPENROUTER');
   const [userKeys, setUserKeys] = useState<Record<string, string>>({});
   const [showApiModal, setShowApiModal] = useState(false);
   
@@ -174,8 +175,8 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
 
     // Check credentials
     const effectiveUseServerKey = isAdmin && useServerKey;
-    if (!effectiveUseServerKey && Object.keys(userKeys).length === 0) {
-      setErrorMsg('API Key not available. Please provide an API key.');
+    if (!effectiveUseServerKey && !userKeys[selectedProvider]) {
+      setErrorMsg(`API Key not available. Please configure your API key for ${selectedProvider}.`);
       setShowApiModal(true);
       return;
     }
@@ -188,9 +189,9 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
       // In V1, the payload needs provider and prompt. We also added optimization_level, technique, marketing_framework
       const payload = {
         prompt: originalPrompt,
-        api_key: effectiveUseServerKey ? null : userKeys['OPENROUTER'] || Object.values(userKeys)[0],
+        api_key: effectiveUseServerKey ? null : userKeys[selectedProvider],
         use_server_key: effectiveUseServerKey,
-        provider: 'OPENROUTER',
+        provider: selectedProvider,
         optimization_level: optimizationLevel,
         technique: advancedPrompting ? optimizationTechnique : 'Auto Detect',
         marketing_framework: advancedPrompting ? marketingFramework : 'Auto Detect'
@@ -264,6 +265,8 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
         setMarketingFramework={setMarketingFramework}
         advancedPrompting={advancedPrompting}
         setAdvancedPrompting={setAdvancedPrompting}
+        selectedProvider={selectedProvider}
+        setSelectedProvider={setSelectedProvider}
       />
 
       {/* Main Panels Workspace */}
