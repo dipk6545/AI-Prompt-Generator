@@ -129,7 +129,7 @@ async def call_gemini(prompt: str, api_key: str, system_prompt: Optional[str] = 
         except (KeyError, IndexError) as e:
             raise Exception(f"Failed to parse Gemini response: {response.text}")
 
-async def call_openrouter(prompt: str, api_key: str, system_prompt: Optional[str] = None) -> str:
+async def call_openrouter(prompt: str, api_key: str, system_prompt: Optional[str] = None, model_slug: Optional[str] = None) -> tuple[str, str]:
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -139,9 +139,10 @@ async def call_openrouter(prompt: str, api_key: str, system_prompt: Optional[str
     }
     
     sys_prompt = system_prompt if system_prompt else SYSTEM_PROMPT
+    model = model_slug if model_slug else "nvidia/nemotron-3-nano-30b-a3b:free"
     
     payload = {
-        "model": "qwen/qwen3.6-plus",
+        "model": model,
         "messages": [
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": f"Optimize this prompt:\n\n{prompt}"}
@@ -154,9 +155,10 @@ async def call_openrouter(prompt: str, api_key: str, system_prompt: Optional[str
         if response.status_code != 200:
             raise Exception(f"OpenRouter API error ({response.status_code}): {response.text}")
         result = response.json()
-        return result["choices"][0]["message"]["content"].strip()
+        actual_model = result.get("model", model)
+        return result["choices"][0]["message"]["content"].strip(), actual_model
 
-async def optimize_prompt_llm(provider: str, prompt: str, api_key: str, system_prompt: Optional[str] = None) -> str:
+async def optimize_prompt_llm(provider: str, prompt: str, api_key: str, system_prompt: Optional[str] = None, model_slug: Optional[str] = None) -> str:
     prov_upper = provider.upper()
     if prov_upper == "GROQ":
         return await call_groq(prompt, api_key, system_prompt)
@@ -167,7 +169,8 @@ async def optimize_prompt_llm(provider: str, prompt: str, api_key: str, system_p
     elif prov_upper == "GEMINI":
         return await call_gemini(prompt, api_key, system_prompt)
     elif prov_upper == "OPENROUTER":
-        return await call_openrouter(prompt, api_key, system_prompt)
+        content, _ = await call_openrouter(prompt, api_key, system_prompt, model_slug)
+        return content
     else:
         raise ValueError(f"Unknown LLM provider: {provider}")
 

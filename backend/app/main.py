@@ -8,7 +8,6 @@ from app.schemas.models import (
 )
 from app.schemas.prompt_analysis import PromptAnalysisRequest, PromptAnalysisResponse
 from app.services.llm_service import optimize_prompt_llm, validate_key_provider
-from app.services.ollama_service import router as ollama_router
 from app.services.prompt_analyzer import PromptAnalyzer
 
 analyzer = PromptAnalyzer()
@@ -27,7 +26,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(ollama_router)
 
 def get_server_key(provider: str) -> str:
     prov_upper = provider.upper()
@@ -41,8 +39,7 @@ def get_server_key(provider: str) -> str:
         return settings.GEMINI_API_KEY
     elif prov_upper == "OPENROUTER":
         return settings.OPENROUTER_API_KEY
-    elif prov_upper == "OLLAMA":
-        return ""  # Ollama is offline — no API key needed
+
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -72,34 +69,41 @@ from fastapi.responses import StreamingResponse
 
 @app.post("/api/stream-optimize-prompt")
 async def api_stream_optimize_prompt(payload: OptimizePromptRequestV2):
-    from app.services.streaming_service import stream_advanced_prompting
+    from app.services.execution_manager import ExecutionManager
     
-    provider = payload.provider.upper()
-    api_key = None
-    if provider != "OLLAMA":
-        api_key = get_server_key(provider) if payload.use_server_key else payload.api_key
-        if not api_key:
-            raise HTTPException(status_code=400, detail="API Key is missing.")
-            
-    return StreamingResponse(
-        stream_advanced_prompting(payload, api_key), 
-        media_type="text/event-stream"
-    )
+    if payload.execution_mode == "HYBRID":
+        # Check if they have keys
+        if not payload.api_keys and not getattr(payload, 'use_server_key', False):
+            raise HTTPException(status_code=400, detail="No API Keys provided for Hybrid mode.")
+        
+        return StreamingResponse(
+            ExecutionManager.execute_hybrid(payload), 
+            media_type="text/event-stream"
+        )
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown execution mode: {payload.execution_mode}")
 
 @app.post("/api/optimize-prompt", response_model=OptimizePromptResponseV2)
 async def api_optimize_prompt(payload: OptimizePromptRequestV2):
     from app.services.prompt_templates import get_enhancement_system_prompt
     from app.services.prompt_diff import generate_diff
     from app.schemas.prompt_enhancement import OptimizationReportItem
-    provider = payload.provider.upper()
+    provider = payload.provider.upper() if hasattr(payload, 'provider') and payload.provider else "OPENROUTER"
 
     # ── ADVANCED PROMPTING PATH ──────────────────────────────────────────────
     if getattr(payload, 'advanced_prompting', False):
         from app.services.prompt_builder import PromptBuilder
         from app.services.language_refiner import LanguageRefiner
+        from app.services.prompt_analyzer import PromptAnalyzer
         
         # 1. Analyzer
+        analyzer = PromptAnalyzer()
         analysis = analyzer.analyze_advanced(payload.prompt)
+        
+        analysis["optimization_level"] = payload.optimization_level
+        analysis["technique"] = payload.technique
+        analysis["marketing_framework"] = getattr(payload, "marketing_framework", "None")
         
         # 2. Builder
         builder = PromptBuilder()
@@ -109,18 +113,16 @@ async def api_optimize_prompt(payload: OptimizePromptRequestV2):
         refiner = LanguageRefiner()
         
         # Get api key
-        api_key = None
-        if provider != "OLLAMA":
-            api_key = get_server_key(provider) if payload.use_server_key else payload.api_key
-            if not api_key:
-                raise HTTPException(status_code=400, detail="API Key is missing.")
+        api_key = get_server_key(provider) if payload.use_server_key else payload.api_key
+        if not api_key:
+            raise HTTPException(status_code=400, detail="API Key is missing.")
                 
         # Validation Loop
         max_retries = 2
         optimized = structured
         for attempt in range(max_retries):
             try:
-                optimized = await refiner.refine_prompt(structured, provider, api_key, getattr(payload, 'ollama_model', None))
+                optimized = await refiner.refine_prompt(structured, provider, api_key)
                 
                 # Basic validation: ensure it didn't just return JSON, and has at least one '#'
                 if "{" in optimized[:10] and "}" in optimized[-10:]:
@@ -150,51 +152,6 @@ async def api_optimize_prompt(payload: OptimizePromptRequestV2):
             diff=generate_diff(payload.prompt, optimized)
         )
 
-    # ── OLLAMA offline path ──────────────────────────────────────────────────
-    if provider == "OLLAMA":
-        from app.providers.ollama_provider import OllamaProvider
-        import json, logging
-        if not await OllamaProvider.health_check():
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Ollama is not running. Please start Ollama and try again."
-            )
-        model = getattr(payload, 'ollama_model', None) or ((await OllamaProvider.list_models()) or [None])[0]
-        if not model:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No Ollama models found. Please pull a model first."
-            )
-        system_prompt = get_enhancement_system_prompt(payload.optimization_level, payload.technique, provider)
-        full_prompt = f"{system_prompt}\n\nUser prompt to optimize:\n{payload.prompt}"
-        raw = await OllamaProvider.generate(model, full_prompt)
-        try:
-            import re
-            clean = raw.strip()
-            fence_match = re.search(r'```(?:json)?\s*(\{.*\})\s*```', clean, re.DOTALL)
-            if fence_match:
-                clean = fence_match.group(1).strip()
-            else:
-                brace_start = clean.find('{')
-                brace_end = clean.rfind('}')
-                if brace_start != -1 and brace_end > brace_start:
-                    clean = clean[brace_start:brace_end + 1]
-            data = json.loads(clean, strict=False)
-            from app.services.prompt_formatter import format_optimized_prompt
-            optimized = format_optimized_prompt(data.get("optimized_prompt", payload.prompt))
-            report_items = [
-                OptimizationReportItem(change=i.get("change", "Enhancement"), reason=i.get("reason", ""))
-                for i in data.get("optimization_report", [])
-            ]
-        except Exception:
-            from app.services.prompt_formatter import format_optimized_prompt
-            optimized = format_optimized_prompt(raw)
-            report_items = [OptimizationReportItem(change="General Enhancement", reason="Optimized by Ollama.")]
-        return OptimizePromptResponseV2(
-            optimized_prompt=optimized,
-            optimization_report=report_items,
-            diff=generate_diff(payload.prompt, optimized)
-        )
     # ── Cloud provider path ──────────────────────────────────────────────────
     if payload.use_server_key:
         api_key = get_server_key(provider)
@@ -241,7 +198,29 @@ async def optimize_prompt(payload: OptimizePromptRequest):
         api_key = payload.api_key.strip()
     
     try:
-        optimized = await optimize_prompt_llm(provider, payload.prompt, api_key)
+        from app.services.prompt_templates import get_enhancement_system_prompt
+        system_prompt = get_enhancement_system_prompt(
+            payload.optimization_level, 
+            payload.technique, 
+            provider, 
+            getattr(payload, "marketing_framework", "None")
+        )
+        
+        optimized = await optimize_prompt_llm(provider, payload.prompt, api_key, system_prompt=system_prompt)
+        
+        # In V1, the response might contain JSON if we fed it the schema_instructions.
+        # But optimize_prompt expects a raw string. 
+        # Let's try to parse it. If it fails, fallback to raw.
+        try:
+            import json
+            import re
+            json_str = re.search(r'\{.*\}', optimized, re.DOTALL)
+            if json_str:
+                data = json.loads(json_str.group())
+                optimized = data.get("optimized_prompt", optimized)
+        except Exception:
+            pass
+
         return OptimizePromptResponse(optimized_prompt=optimized)
     except Exception as e:
         raise HTTPException(

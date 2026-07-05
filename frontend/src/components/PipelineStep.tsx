@@ -21,7 +21,7 @@ export const PipelineStep: React.FC<PipelineStepProps> = ({ step }) => {
     switch (step.status) {
       case 'completed':
         return <CheckCircle2 className="w-4 h-4 text-emerald-500 bg-emerald-50 rounded-full" />;
-      case 'error':
+      case 'failed':
         return <AlertCircle className="w-4 h-4 text-rose-500 bg-rose-50 rounded-full" />;
       case 'running':
         return <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />;

@@ -1,316 +1,93 @@
-import { useState, useEffect } from 'react';
-import { Header } from './components/Header';
-import { PromptPanels, type AnalysisResponse } from './components/PromptPanels';
-import { AdminDialog } from './components/AdminDialog';
-import { encryptData, decryptData } from './utils/crypto';
-
-const API_BASE_URL = 'http://127.0.0.1:8080';
+import { useState } from 'react';
+import V1App from './V1App';
+import V2App from './V2App';
+import V3App from './V3App';
 
 function App() {
-  const [provider, setProvider] = useState(() => localStorage.getItem('promptcraft_provider') || 'GROQ');
-  
-  useEffect(() => {
-    localStorage.setItem('promptcraft_provider', provider);
-  }, [provider]);
+  const [currentVersion, setCurrentVersion] = useState<'v1' | 'v2' | 'v3' | null>(null);
 
-  const [useServerKey, setUseServerKey] = useState(true);
-  const [userKeys, setUserKeys] = useState<Record<string, string>>({});
-  
-  const [originalPrompt, setOriginalPrompt] = useState('');
-  const [optimizedPrompt, setOptimizedPrompt] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  
-  // PromptCraft Engine State
-  const [isEngineActive, setIsEngineActive] = useState(false);
-  const [isEngineRunning, setIsEngineRunning] = useState(false);
-  const [enginePayload, setEnginePayload] = useState<any>(null);
+  const goHome = () => setCurrentVersion(null);
 
-  // Track the original prompt text to prevent redundant requests
-  const [lastAnalyzedPromptInput, setLastAnalyzedPromptInput] = useState('');
-  const [lastOptimizedPromptInput, setLastOptimizedPromptInput] = useState('');
-  
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [showAdminModal, setShowAdminModal] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
-
-  // Phase 3 States
-  const [optimizationLevel, setOptimizationLevel] = useState('Professional');
-  const [optimizationTechnique, setOptimizationTechnique] = useState('Auto Detect');
-  const [optimizationReport, setOptimizationReport] = useState<any[]>([]);
-  const [promptDiff, setPromptDiff] = useState<string>('');
-
-  // New Analysis State
-  const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [ollamaModel, setOllamaModel] = useState<string>(() => localStorage.getItem('promptcraft_ollama_model') || '');
-
-  // Advanced Prompting Toggle
-  const [advancedPrompting, setAdvancedPrompting] = useState<boolean>(() => {
-    const saved = localStorage.getItem('promptcraft_advanced_prompting');
-    return saved === 'true';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('promptcraft_advanced_prompting', advancedPrompting.toString());
-  }, [advancedPrompting]);
-
-  useEffect(() => {
-    localStorage.setItem('promptcraft_ollama_model', ollamaModel);
-  }, [ollamaModel]);
-
-  // Initialize and load saved keys & admin session
-  useEffect(() => {
-    // Check session storage for admin mode
-    const adminSession = sessionStorage.getItem('adminEnabled');
-    if (adminSession === 'true') {
-      setIsAdmin(true);
-    }
-
-    // Load and decrypt stored user API keys
-    const loadKeys = async () => {
-      const loadedKeys: Record<string, string> = {};
-      const providers = ['GROQ', 'MISTRAL', 'CEREBRAS', 'GEMINI', 'OPENROUTER'];
-      
-      for (const prov of providers) {
-        const encrypted = localStorage.getItem(`promptcraft_key_${prov}`);
-        if (encrypted) {
-          try {
-            const decrypted = await decryptData(encrypted);
-            loadedKeys[prov] = decrypted;
-          } catch (e) {
-            console.error(`Failed to decrypt key for ${prov}:`, e);
-            // Clear corrupted key
-            localStorage.removeItem(`promptcraft_key_${prov}`);
-          }
-        }
-      }
-      setUserKeys(loadedKeys);
-    };
-
-    loadKeys();
-  }, []);
-
-  const handleSaveUserKey = async (prov: string, rawKey: string) => {
-    try {
-      const encrypted = await encryptData(rawKey);
-      localStorage.setItem(`promptcraft_key_${prov}`, encrypted);
-      setUserKeys((prev) => ({ ...prev, [prov]: rawKey }));
-      setErrorMsg(null);
-    } catch (e) {
-      setErrorMsg('Failed to save API key securely.');
-    }
-  };
-
-  const handleDeleteUserKey = (prov: string) => {
-    localStorage.removeItem(`promptcraft_key_${prov}`);
-    setUserKeys((prev) => {
-      const updated = { ...prev };
-      delete updated[prov];
-      return updated;
-    });
-  };
-
-  const handleAdminToggle = (active: boolean) => {
-    if (active) {
-      setShowAdminModal(true);
-    } else {
-      sessionStorage.removeItem('adminEnabled');
-      setIsAdmin(false);
-    }
-  };
-
-  const handleAdminSubmit = async (password: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/authenticate-admin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          sessionStorage.setItem('adminEnabled', 'true');
-          setIsAdmin(true);
-          return true;
-        }
-      }
-      return false;
-    } catch (error) {
-      console.error('Admin authentication error:', error);
-      throw new Error('Could not connect to authentication server.');
-    }
-  };
-
-  const handleAnalyze = async () => {
-    if (!originalPrompt.trim()) return;
-    setErrorMsg(null);
-    setIsAnalyzing(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/analyze-prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: originalPrompt }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to analyze prompt.');
-      }
-
-      const data = await response.json();
-      setAnalysisData(data);
-      setLastAnalyzedPromptInput(originalPrompt);
-    } catch (error: any) {
-      console.error('Analysis error:', error);
-      setErrorMsg(error.message || 'An error occurred while communicating with the analysis server.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleGenerate = async () => {
-    setErrorMsg(null);
-    setOptimizedPrompt('');
-    setOptimizationReport([]);
-    setPromptDiff('');
-
-    // Check credentials
-    let targetKey = '';
-    if (!useServerKey) {
-      targetKey = userKeys[provider] || '';
-      if (!targetKey) {
-        setErrorMsg(`API key is missing for ${provider}. Please enter a key or select Server Key.`);
-        return;
-      }
-    }
-
-    setIsLoading(true);
-
-    try {
-      // Create Payload
-      const payload = {
-        prompt: originalPrompt,
-        provider: provider,
-        api_key: useServerKey ? null : targetKey,
-        use_server_key: useServerKey,
-        optimization_level: optimizationLevel,
-        technique: optimizationTechnique,
-        advanced_prompting: advancedPrompting,
-        ...(provider === 'OLLAMA' && ollamaModel ? { ollama_model: ollamaModel } : {})
-      };
-
-      // Automatically run analysis alongside optimization for unified data update
-      const analyzeResponse = await fetch(`${API_BASE_URL}/api/analyze-prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: originalPrompt }),
-      });
-      if (analyzeResponse.ok) {
-        const analyzeData = await analyzeResponse.json();
-        setAnalysisData(analyzeData);
-        setLastAnalyzedPromptInput(originalPrompt);
-      }
-
-      // STREAMING: Offload to PromptCraftEngine component for both modes
-      setEnginePayload(payload);
-      setIsEngineActive(true);
-      setIsEngineRunning(true);
-      setLastOptimizedPromptInput(originalPrompt);
-
-    } catch (error: any) {
-      console.error('Optimization error:', error);
-      setErrorMsg(error.message || 'An error occurred while communicating with the server.');
-      setIsLoading(false);
-    }
-  };
-
-  const handleReset = () => {
-    setOriginalPrompt('');
-    setOptimizedPrompt('');
-    setOptimizationReport([]);
-    setPromptDiff('');
-    setAnalysisData(null);
-    setErrorMsg(null);
-    setIsEngineActive(false);
-    setEnginePayload(null);
-    setIsEngineRunning(false);
-    setLastAnalyzedPromptInput('');
-    setLastOptimizedPromptInput('');
-  };
-
-  const handleCopy = () => {
-    if (!optimizedPrompt) return;
-    navigator.clipboard.writeText(optimizedPrompt);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
-  };
+  if (currentVersion === 'v1') return <V1App onBackToHome={goHome} />;
+  if (currentVersion === 'v2') return <V2App onBackToHome={goHome} />;
+  if (currentVersion === 'v3') return <V3App onBackToHome={goHome} />;
 
   return (
-    <div className="w-screen h-screen flex flex-col bg-slate-50 overflow-hidden select-none">
-      {/* Top Header */}
-      <Header
-        provider={provider}
-        setProvider={setProvider}
-        useServerKey={useServerKey}
-        setUseServerKey={setUseServerKey}
-        userKeys={userKeys}
-        onSaveUserKey={handleSaveUserKey}
-        onDeleteUserKey={handleDeleteUserKey}
-        isAdmin={isAdmin}
-        onToggleAdmin={handleAdminToggle}
-        optimizationLevel={optimizationLevel}
-        setOptimizationLevel={setOptimizationLevel}
-        optimizationTechnique={optimizationTechnique}
-        setOptimizationTechnique={setOptimizationTechnique}
-        ollamaModel={ollamaModel}
-        setOllamaModel={setOllamaModel}
-        advancedPrompting={advancedPrompting}
-        setAdvancedPrompting={setAdvancedPrompting}
-      />
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Background decorations */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-600/20 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none"></div>
+      
+      <div className="z-10 text-center max-w-3xl mb-12">
+        <div className="mx-auto w-20 h-20 bg-gradient-to-tr from-violet-600 to-indigo-500 rounded-2xl flex items-center justify-center text-white font-bold text-3xl mb-6 shadow-xl shadow-violet-500/30">
+          PC
+        </div>
+        <h1 className="text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-indigo-400">
+          PromptCraft AI
+        </h1>
+        <p className="text-lg text-slate-400">
+          Select your engine version. Choose from legacy single-pass optimization, to advanced multi-step building, to our latest real-time streaming pipeline.
+        </p>
+      </div>
 
-      {/* Main Panels Workspace */}
-      <PromptPanels
-        originalPrompt={originalPrompt}
-        setOriginalPrompt={setOriginalPrompt}
-        optimizedPrompt={optimizedPrompt}
-        isLoading={isLoading || isEngineRunning}
-        onGenerate={handleGenerate}
-        onReset={handleReset}
-        isCopied={isCopied}
-        onCopy={handleCopy}
-        errorMsg={errorMsg}
-        analysisData={analysisData}
-        isAnalyzing={isAnalyzing}
-        onAnalyze={handleAnalyze}
-        optimizationReport={optimizationReport}
-        promptDiff={promptDiff}
-        advancedPrompting={advancedPrompting}
-        isEngineActive={isEngineActive}
-        enginePayload={enginePayload}
-        lastAnalyzedPromptInput={lastAnalyzedPromptInput}
-        lastOptimizedPromptInput={lastOptimizedPromptInput}
-        onEngineComplete={(opt, report, diff) => {
-          setOptimizedPrompt(opt);
-          setOptimizationReport(report || []);
-          setPromptDiff(diff || '');
-          setIsEngineRunning(false);
-          setIsLoading(false);
-        }}
-        onEngineError={(msg) => {
-          setErrorMsg(msg);
-          setIsEngineRunning(false);
-          setIsLoading(false);
-        }}
-      />
+      <div className="z-10 grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
+        {/* V1 Card */}
+        <div 
+          onClick={() => setCurrentVersion('v1')}
+          className="group cursor-pointer bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 hover:border-violet-500/50 rounded-2xl p-6 transition-all duration-300 shadow-lg shadow-slate-950/25 hover:shadow-2xl hover:shadow-violet-500/10 hover:-translate-y-1 flex flex-col h-full"
+        >
+          <div className="w-12 h-12 bg-slate-700 rounded-xl flex items-center justify-center text-slate-300 font-bold mb-4 group-hover:bg-violet-500/20 group-hover:text-violet-400 transition-colors">
+            V1
+          </div>
+          <h2 className="text-xl font-bold mb-2 text-white group-hover:text-violet-300 transition-colors">Legacy API</h2>
+          <p className="text-sm text-slate-400 flex-1 leading-relaxed">
+            The classic single-pass LLM optimization route. Quick and simple prompt restructuring.
+          </p>
+          <div className="mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-between text-xs font-semibold text-slate-500 group-hover:text-violet-400 transition-colors">
+            <span>/optimize-prompt</span>
+            <span>&rarr;</span>
+          </div>
+        </div>
 
-      {/* Admin Authorization Modal */}
-      <AdminDialog
-        isOpen={showAdminModal}
-        onClose={() => setShowAdminModal(false)}
-        onSubmit={handleAdminSubmit}
-      />
+        {/* V2 Card */}
+        <div 
+          onClick={() => setCurrentVersion('v2')}
+          className="group cursor-pointer bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 hover:border-indigo-500/50 rounded-2xl p-6 transition-all duration-300 shadow-lg shadow-slate-950/25 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 flex flex-col h-full"
+        >
+          <div className="w-12 h-12 bg-slate-700 rounded-xl flex items-center justify-center text-slate-300 font-bold mb-4 group-hover:bg-indigo-500/20 group-hover:text-indigo-400 transition-colors">
+            V2
+          </div>
+          <h2 className="text-xl font-bold mb-2 text-white group-hover:text-indigo-300 transition-colors">Advanced Pipeline</h2>
+          <p className="text-sm text-slate-400 flex-1 leading-relaxed">
+            Standard REST API implementation using the structural PromptBuilder and multi-stage refinement.
+          </p>
+          <div className="mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-between text-xs font-semibold text-slate-500 group-hover:text-indigo-400 transition-colors">
+            <span>/api/optimize-prompt</span>
+            <span>&rarr;</span>
+          </div>
+        </div>
+
+        {/* V3 Card */}
+        <div 
+          onClick={() => setCurrentVersion('v3')}
+          className="group cursor-pointer bg-gradient-to-b from-slate-800/80 to-slate-800/50 backdrop-blur-xl border border-slate-600 hover:border-sky-400/50 rounded-2xl p-6 transition-all duration-300 shadow-lg shadow-slate-950/25 hover:shadow-2xl hover:shadow-sky-500/20 hover:-translate-y-1 flex flex-col h-full relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 bg-sky-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">
+            Latest
+          </div>
+          <div className="w-12 h-12 bg-sky-500/20 rounded-xl flex items-center justify-center text-sky-400 font-bold mb-4">
+            V3
+          </div>
+          <h2 className="text-xl font-bold mb-2 text-white group-hover:text-sky-300 transition-colors">Streaming Engine</h2>
+          <p className="text-sm text-slate-400 flex-1 leading-relaxed">
+            The ultimate real-time experience. Streams the entire pipeline thought process and optimizations directly to the UI.
+          </p>
+          <div className="mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-between text-xs font-semibold text-slate-500 group-hover:text-sky-400 transition-colors">
+            <span>/api/stream-optimize-prompt</span>
+            <span>&rarr;</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

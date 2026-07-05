@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Sparkles, Copy, Check, Info, ShieldAlert, BarChart3, AlertCircle, Lightbulb, Loader2, Download, Trash2, Plus } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Sparkles, Copy, Check, Info, ShieldAlert, BarChart3, AlertCircle, Lightbulb, Loader2, Download, Plus } from 'lucide-react';
 import { OptimizationReportCard } from './OptimizationReportCard';
 import { PromptCraftEngine } from './PromptCraftEngine';
 import { MetadataBar } from './MetadataBar';
@@ -32,8 +32,8 @@ interface PromptPanelsProps {
   isAnalyzing: boolean;
   onAnalyze: () => void;
   optimizationReport: any[];
-  promptDiff: string;
-  advancedPrompting: boolean;
+  leaderboard?: any[];
+  advancedPrompting?: boolean;
   
   // Tracking
   lastAnalyzedPromptInput?: string;
@@ -72,7 +72,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
   isAnalyzing,
   onAnalyze,
   optimizationReport,
-  promptDiff,
+  leaderboard = [],
   advancedPrompting,
   lastAnalyzedPromptInput = '',
   lastOptimizedPromptInput = '',
@@ -84,10 +84,10 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
 }) => {
   const [loadingStage, setLoadingStage] = React.useState(0);
   
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea dynamically
-  React.useEffect(() => {
+  useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       if (isEngineActive) {
@@ -99,17 +99,13 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
         const newHeight = Math.max(107, Math.min(textareaRef.current.scrollHeight, 260));
         textareaRef.current.style.height = `${newHeight}px`;
       }
-    } else if (textareaRef.current) {
-      textareaRef.current.style.height = '';
     }
   }, [originalPrompt, isEngineActive]);
 
   // Dynamic Timer
-  
-  // Dynamic Timer
   const [elapsedSeconds, setElapsedSeconds] = React.useState(0);
-  React.useEffect(() => {
-    let interval: NodeJS.Timeout;
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
     if (isLoading) {
       setElapsedSeconds(0);
       interval = setInterval(() => {
@@ -120,16 +116,14 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
   }, [isLoading]);
 
   // Global Metadata
-  const engineMetadata = React.useRef<any>(null);
+  const [engineMetadata, setEngineMetadata] = useState<any>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     let timers: ReturnType<typeof setTimeout>[] = [];
     if (isLoading && advancedPrompting) {
       setLoadingStage(0);
-      timers.push(setTimeout(() => setLoadingStage(1), 800));
-      timers.push(setTimeout(() => setLoadingStage(2), 1600));
-    } else {
-      setLoadingStage(0);
+      timers.push(setTimeout(() => setLoadingStage(1), 3000));
+      timers.push(setTimeout(() => setLoadingStage(2), 6000));
     }
     return () => timers.forEach(clearTimeout);
   }, [isLoading, advancedPrompting]);
@@ -180,10 +174,11 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
         <div className="h-full flex flex-col min-h-0 pb-2 px-1">
           
           {/* Unified Scrollable Container */}
-          <div className="flex-1 overflow-y-auto -mx-2 px-2 -my-1.5 py-1.5 flex flex-col gap-4 min-h-0">
+          <div className="flex-1 overflow-y-auto -mx-6 px-6 -my-6 py-6 min-h-0">
+            <div className="min-h-full flex flex-col gap-4">
           
           {/* Top Panel - Input */}
-          <div className={`flex flex-col bg-white rounded-2xl border border-slate-100 shadow-md overflow-hidden transition-all shrink-0 ${
+          <div className={`flex flex-col bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden transition-all shrink-0 ${
             isEngineActive 
               ? 'h-auto' 
               : 'group focus-within:ring-2 focus-within:ring-violet-500/10 focus-within:border-violet-500 min-h-[200px]'
@@ -248,11 +243,11 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
               payload={enginePayload}
               onComplete={onEngineComplete}
               onError={onEngineError}
-              onMetadataUpdate={(meta) => { engineMetadata.current = meta; }}
+              onMetadataUpdate={(meta) => { setEngineMetadata(meta); }}
             />
 
             {/* Bottom Panel - Optimized Prompt Output Section */}
-            <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-md overflow-hidden min-h-[160px] flex-1 shrink-0">
+            <div className="flex flex-col bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden min-h-[160px] flex-1 shrink-0">
             <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -306,6 +301,31 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
             </div>
 
             {/* grid wrapper closed previously */}
+            {/* Leaderboard Card (if available) */}
+            {leaderboard && leaderboard.length > 0 && (
+              <div className="w-full bg-white border border-amber-200/60 shadow-xl rounded-xl overflow-hidden flex flex-col transition-all duration-300 shrink-0">
+                <div className="bg-amber-50/50 px-4 py-3 border-b border-amber-100 flex items-center gap-2">
+                  <span className="text-amber-500 font-bold text-lg">🏆</span>
+                  <h3 className="text-sm font-bold text-slate-800">Prompt Quality Leaderboard</h3>
+                </div>
+                <div className="p-3">
+                  <div className="flex flex-col gap-2">
+                    {leaderboard.map((item, idx) => (
+                      <div key={item.provider} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${idx === 0 ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-500'}`}>
+                            #{idx + 1}
+                          </div>
+                          <span className="text-sm font-semibold text-slate-700">{item.provider}</span>
+                        </div>
+                        <span className="text-xs font-bold text-violet-600">{item.score} / 100</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Optimization Report */}
             <OptimizationReportCard report={optimizationReport} />
 
@@ -313,18 +333,19 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
             {(optimizationReport.length > 0) && (
               <div className="h-20 shrink-0" />
             )}
+            </div>
           </div>
 
           {/* Global MetadataBar anchored to the bottom of the left column */}
           {(isLoading || optimizedPrompt) && (
-            <div className="mt-3 bg-white border border-slate-100 shadow-md rounded-xl overflow-hidden shrink-0">
+            <div className="mt-3 bg-white border border-slate-100 shadow-xl rounded-xl overflow-hidden shrink-0">
               <MetadataBar 
                 metadata={
                   enginePayload ? {
-                    ...(engineMetadata.current || {}),
+                    provider: 'PromptCraft',
+                    model: 'OpenRouter Dynamic Auto-Routing',
+                    ...(engineMetadata || {}),
                     elapsed_time: `${elapsedSeconds.toFixed(1)}s`,
-                    provider: enginePayload.provider,
-                    model: enginePayload.ollama_model || enginePayload.provider,
                     optimization_level: enginePayload.optimization_level,
                     technique: enginePayload.technique
                   } : {
@@ -338,7 +359,8 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
         </div> {/* Left Column close */}
 
         {/* Right Column - Analysis Section */}
-        <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-md overflow-hidden flex flex-col h-full min-h-[500px]">
+        <div className="h-full flex flex-col min-h-0 pb-2 px-1">
+          <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden flex flex-col h-full min-h-[500px]">
           <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
             <div className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4 text-violet-500" />
@@ -439,6 +461,7 @@ export const PromptPanels: React.FC<PromptPanelsProps> = ({
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
 

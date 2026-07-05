@@ -1,7 +1,7 @@
 import json
 from typing import Optional
 
-def get_enhancement_system_prompt(level: str, technique: str, provider: Optional[str] = None) -> str:
+def get_enhancement_system_prompt(level: str, technique: str, provider: Optional[str] = None, marketing_framework: str = "None") -> str:
     """
     Constructs the system prompt instructing the LLM how to optimize the prompt
     based on the requested optimization level and prompt engineering technique.
@@ -82,7 +82,7 @@ FORMATTING & PRINCIPLES
     elif level_lower == "professional":
         level_instructions = "LEVEL: Professional\nGenerate an industry-standard, well-structured prompt. You MUST define an AI Role, provide necessary context, structure the requirements clearly using Markdown headings (like # Role, # Objective, # Guidelines), and request a specific output format."
     elif level_lower == "expert":
-        level_instructions = "LEVEL: Expert\nGenerate a comprehensive, masterfully engineered prompt. You MUST include explicit Markdown sections for: # Role, # Context, # Target Audience, # Requirements, # Constraints, # Output Structure, and (if applicable) # Examples and # Guidelines."
+        level_instructions = "LEVEL: Expert\nGenerate a comprehensive, masterfully engineered prompt. You MUST include explicit Markdown sections for: # Role, # Context, # Target Audience, # Requirements, # Constraints, # Output Structure, and (if applicable) # Examples and # Guidelines.\n\nCRITICAL EXPERT ADDITIONS:\n1. ANTI-HALLUCINATION GUARDRAIL: You MUST add a section that instructs the model: 'If the answer cannot be confidently determined from the provided context or constraints, reply with NOT FOUND instead of guessing.'\n2. RECENCY BIAS PREVENTION: You MUST dynamically take the most critical instruction or constraint and repeat it verbatim at the very bottom of the generated prompt."
     else:
         level_instructions = "LEVEL: Professional\nGenerate an industry-standard, well-structured prompt."
 
@@ -101,8 +101,37 @@ FORMATTING & PRINCIPLES
         technique_instructions = "TECHNIQUE: Structured Prompt\nUse distinct H1 headings and Markdown sections (e.g., # Context, # Task, # Constraints) to perfectly segment and layout the prompt's instructions."
     elif tech_lower == "react":
         technique_instructions = "TECHNIQUE: ReAct (Reasoning and Acting)\nInstruct the AI to use a framework of Thought, Action, Observation, and Final Answer, structured clearly with logical sections."
+    elif tech_lower == "least-to-most" or tech_lower == "least_to_most":
+        technique_instructions = "TECHNIQUE: Least-to-Most\nInstruct the AI to break down complex problems into a series of simpler sub-problems, solving them sequentially."
+    elif tech_lower == "self-ask" or tech_lower == "self_ask":
+        technique_instructions = "TECHNIQUE: Self-Ask\nInstruct the AI to explicitly ask follow-up questions to gather necessary information before answering."
+    elif "symbolic" in tech_lower or "pal" in tech_lower:
+        technique_instructions = "TECHNIQUE: Symbolic Reasoning / PAL\nInstruct the AI to use pseudocode, mathematical notation, or logic structures to derive the solution."
+    elif tech_lower == "directional_stimulus" or tech_lower == "directional stimulus":
+        technique_instructions = "TECHNIQUE: Directional Stimulus\nProvide specific keyword hints and guardrails to strongly constrain and guide the AI's generation."
+    elif tech_lower == "iterative_chaining" or tech_lower == "iterative chaining":
+        technique_instructions = "TECHNIQUE: Iterative Chaining\nStructure the prompt so that it links multiple logic blocks together, treating complex tasks iteratively."
+    elif tech_lower == "tree_of_thoughts" or tech_lower == "tree of thoughts":
+        technique_instructions = "TECHNIQUE: Tree of Thoughts\nInstruct the AI to explore at least 3 different branches of reasoning or ideas, evaluate the pros and cons of each, and then synthesize them into a final output."
     else:
         technique_instructions = "TECHNIQUE: Auto Detect\nApply whatever prompt engineering techniques (Role, Chain of Thought, Structured, etc.) you deem most suitable, ensuring the layout is structured and easy to scan."
+
+    mf_instructions = ""
+    mf_upper = marketing_framework.upper() if marketing_framework else "NONE"
+    if mf_upper != "NONE" and mf_upper != "AUTO DETECT":
+        mf_instructions = f"\n\nMARKETING FRAMEWORK: {mf_upper}\nYou MUST structure the generated prompt according to the {mf_upper} framework sections perfectly."
+        if mf_upper == "C.O.R.E.":
+            mf_instructions += "\nInclude these headers: # Context, # Objective, # Role, # Example."
+        elif mf_upper == "C.R.E.A.T.E.":
+            mf_instructions += "\nInclude these headers: # Context, # Role, # Example, # Audience, # Tone, # End Goal."
+        elif mf_upper == "R.I.S.E.N.":
+            mf_instructions += "\nInclude these headers: # Role, # Input, # Scenario, # Expectation, # Nuance."
+        elif mf_upper == "P.A.R.A.":
+            mf_instructions += "\nInclude these headers: # Problem, # Analysis, # Recommendation, # Action."
+        elif mf_upper == "D.A.R.E.":
+            mf_instructions += "\nInclude these headers: # Describe, # Act, # Resonate, # Elevate."
+        elif mf_upper == "R.O.A.D.":
+            mf_instructions += "\nInclude these headers: # Recognize, # Options, # Analyze, # Decide."
 
     provider_instructions = ""
     if provider:
@@ -175,4 +204,4 @@ Return ONLY a raw JSON object with the following structure:
 }
 """
 
-    return f"{base_instructions}\n\n{level_instructions}\n\n{technique_instructions}\n\n{provider_instructions}\n\n{schema_instructions}"
+    return f"{base_instructions}\n\n{level_instructions}\n\n{technique_instructions}\n\n{mf_instructions}\n\n{provider_instructions}\n\n{schema_instructions}"

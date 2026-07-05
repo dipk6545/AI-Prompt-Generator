@@ -66,4 +66,19 @@ class PromptBuilder:
         if category != "Business":
             sections.append(f"# Guidelines\n- Preserve user intent.\n- Never invent domain-specific facts.\n- Be concise and highly readable.")
 
+        # 11. Marketing Framework (if specified)
+        mf = analysis_data.get("marketing_framework", "None")
+        if mf == "C.O.R.E.":
+            sections.append("# Context\nProvide background information here.\n# Objective\nDefine the specific goal.\n# Role\nAssign the exact perspective.\n# Example\nProvide a structural reference.")
+        elif mf == "C.R.E.A.T.E.":
+            sections.append("# Context\n[Background]\n# Role\n[AI Persona]\n# Example\n[Reference]\n# Audience\n[Target Demographics]\n# Tone\n[Required Voice]\n# End Goal\n[Desired Result]")
+        elif mf == "R.I.S.E.N.":
+            sections.append("# Role\n[AI Persona]\n# Input\n[Data or Context]\n# Scenario\n[Real-world Problem]\n# Expectation\n[Answer Criteria]\n# Nuance\n[Multiple Perspectives to consider]")
+        elif mf == "P.A.R.A.":
+            sections.append("# Problem\n[Define the issue]\n# Analysis\n[Evaluate factors]\n# Recommendation\n[Suggest solutions]\n# Action\n[Clear next steps]")
+        elif mf == "D.A.R.E.":
+            sections.append("# Describe\n[Set the scene]\n# Act\n[Define the message]\n# Resonate\n[Emotional connection]\n# Elevate\n[Improve impact]")
+        elif mf == "R.O.A.D.":
+            sections.append("# Recognize\n[Identify challenge]\n# Options\n[Present solutions]\n# Analyze\n[Weigh pros/cons]\n# Decide\n[Recommend best action]")
+
         return "\n\n".join(sections)

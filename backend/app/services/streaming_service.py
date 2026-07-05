@@ -17,7 +17,7 @@ async def stream_advanced_prompting(payload: OptimizePromptRequestV2, api_key: s
     refiner = LanguageRefiner()
     
     provider = payload.provider.upper()
-    model = getattr(payload, 'ollama_model', None) if provider == "OLLAMA" else provider
+    model = provider
 
     def build_metadata(stage: str):
         elapsed = round(time.time() - start_time, 1)
@@ -63,6 +63,9 @@ async def stream_advanced_prompting(payload: OptimizePromptRequestV2, api_key: s
             ).to_sse_string()
             
             await asyncio.sleep(0.3)
+            analysis["optimization_level"] = payload.optimization_level
+            analysis["technique"] = payload.technique
+            analysis["marketing_framework"] = getattr(payload, "marketing_framework", "None")
             category = analysis.get("category", "General")
             
             progress = manager.advance(stage, True)
@@ -151,7 +154,7 @@ async def stream_advanced_prompting(payload: OptimizePromptRequestV2, api_key: s
         max_retries = 2
         for attempt in range(max_retries):
             try:
-                optimized = await refiner.refine_prompt(prompt_to_refine, provider, api_key, getattr(payload, 'ollama_model', None))
+                optimized = await refiner.refine_prompt(prompt_to_refine, provider, api_key)
                 
                 # Validation for Advanced mode
                 if payload.advanced_prompting:

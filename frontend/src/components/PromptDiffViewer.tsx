@@ -20,7 +20,7 @@ export const PromptDiffViewer: React.FC<PromptDiffViewerProps> = ({ diffText }) 
   if (diffLines.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-md p-5 mt-4 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-xl p-5 mt-4 overflow-hidden">
       <div className="flex items-center justify-between mb-4 shrink-0">
         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
           <FileDiff className="w-4 h-4 text-violet-500" />

@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { PipelineStep, type StepEvent } from './PipelineStep';
 import { ProgressBar } from './ProgressBar';
-import { MetadataBar } from './MetadataBar';
 import { ChevronDown, ChevronRight, Zap } from 'lucide-react';
 
 interface PromptCraftEngineProps {
   payload: any;
   isActive: boolean;
-  onComplete: (optimizedPrompt: string, report: any[], diff: string) => void;
+  onComplete: (optimizedPrompt: string, report: any[], diff: string, leaderboard?: any[]) => void;
   onError: (errorMsg: string) => void;
   onMetadataUpdate?: (meta: Record<string, any>) => void;
 }
@@ -15,7 +14,6 @@ interface PromptCraftEngineProps {
 export const PromptCraftEngine: React.FC<PromptCraftEngineProps> = ({ payload, isActive, onComplete, onError, onMetadataUpdate }) => {
   const [steps, setSteps] = useState<StepEvent[]>([]);
   const [globalProgress, setGlobalProgress] = useState(0);
-  const [currentMetadata, setCurrentMetadata] = useState<Record<string, any> | undefined>();
   const [isFinished, setIsFinished] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -24,20 +22,20 @@ export const PromptCraftEngine: React.FC<PromptCraftEngineProps> = ({ payload, i
     if (!isActive) {
       setSteps([]);
       setGlobalProgress(0);
-      setCurrentMetadata(undefined);
       setIsFinished(false);
       return;
     }
 
     // Pre-initialize the steps based on the mode
-    const isAdvanced = payload?.advanced_prompting === true;
-    const initialStages = isAdvanced 
-      ? ['Prompt Analysis', 'Category Detection', 'Prompt Score', 'Missing Information', 'Prompt Builder', 'Language Refinement', 'Validation']
-      : ['Prompt Analysis', 'Language Refinement', 'Validation'];
+    const isHybrid = payload?.execution_mode === 'HYBRID';
+    const initialStages = isHybrid 
+      ? ['Analyzing Prompt', 'Building Structural Template', 'Benchmarking Cloud Providers', 'Evaluating Leaderboard']
+      : ['Analyzing Prompt', 'Building Structural Template', 'Local Refinement', 'Validation'];
       
     const initialSteps: StepEvent[] = initialStages.map(stage => ({
       stage,
       status: 'pending',
+      progress: 0,
       description: 'Waiting to start...',
     }));
     
@@ -97,7 +95,6 @@ export const PromptCraftEngine: React.FC<PromptCraftEngineProps> = ({ payload, i
                 
                 setGlobalProgress(event.progress);
                 if (event.metadata) {
-                  setCurrentMetadata(event.metadata);
                   if (onMetadataUpdate) onMetadataUpdate(event.metadata);
                 }
                 
@@ -106,12 +103,13 @@ export const PromptCraftEngine: React.FC<PromptCraftEngineProps> = ({ payload, i
                   setIsFinished(true);
                 }
 
-                if (event.stage === 'Validation' && event.status === 'completed' && event.details) {
+                if ((event.stage === 'Validation' || event.stage === 'Evaluating Leaderboard') && event.status === 'completed' && event.details) {
                   const finalResult = event.details.__FINAL_RESULT__;
                   const finalReport = event.details.__REPORT__;
                   const finalDiff = event.details.__DIFF__;
+                  const finalLeaderboard = event.details.__LEADERBOARD__;
                   if (finalResult) {
-                    onComplete(finalResult, finalReport, finalDiff);
+                    onComplete(finalResult, finalReport, finalDiff, finalLeaderboard);
                     setIsFinished(true);
                   }
                 }
@@ -141,7 +139,7 @@ export const PromptCraftEngine: React.FC<PromptCraftEngineProps> = ({ payload, i
   if (!isActive && steps.length === 0) return null;
 
   return (
-    <div className="w-full bg-white border border-violet-200/60 shadow-md rounded-xl overflow-hidden flex flex-col mb-4 transition-all duration-300 shrink-0">
+    <div className="w-full bg-white border border-violet-200/60 shadow-xl rounded-xl overflow-hidden flex flex-col mb-4 transition-all duration-300 shrink-0">
       
       {/* Header */}
       <div 
