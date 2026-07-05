@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Header } from './components/Header';
+import { V1Header } from './components/V1Header';
 import { PromptPanels, type AnalysisResponse } from './components/PromptPanels';
 import { AdminDialog } from './components/AdminDialog';
 import { encryptData, decryptData } from './utils/crypto';
@@ -19,7 +19,6 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
   const [selectedProvider, setSelectedProvider] = useState('OPENROUTER');
   const [ollamaModel, setOllamaModel] = useState<string>(() => localStorage.getItem('promptcraft_ollama_model') || '');
   const [userKeys, setUserKeys] = useState<Record<string, string>>({});
-  const [showApiModal, setShowApiModal] = useState(false);
   
   const [originalPrompt, setOriginalPrompt] = useState('');
   const [optimizedPrompt, setOptimizedPrompt] = useState('');
@@ -43,7 +42,7 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
   // Phase 3 States
   const [optimizationLevel, setOptimizationLevel] = useState('Professional');
   const [optimizationTechnique, setOptimizationTechnique] = useState('Auto Detect');
-  const [marketingFramework, setMarketingFramework] = useState('Auto Detect');
+  const [marketingFramework] = useState('Auto Detect');
   const [optimizationReport, setOptimizationReport] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
@@ -181,8 +180,7 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
     // Check credentials
     const effectiveUseServerKey = isAdmin && useServerKey;
     if (selectedProvider !== 'OLLAMA' && !effectiveUseServerKey && !userKeys[selectedProvider]) {
-      setErrorMsg(`API Key not available. Please configure your API key for ${selectedProvider}.`);
-      setShowApiModal(true);
+      setErrorMsg(`API Key not available. Please configure your API key for ${selectedProvider} in the header.`);
       return;
     }
     setIsLoading(true);
@@ -252,12 +250,10 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
   return (
     <div className="w-screen h-screen flex flex-col bg-slate-50 overflow-hidden select-none">
       {/* Top Header */}
-      <Header
+      <V1Header
         onBackToHome={onBackToHome}
         useServerKey={useServerKey}
         setUseServerKey={setUseServerKey}
-        showApiModal={showApiModal}
-        setShowApiModal={setShowApiModal}
         userKeys={userKeys}
         onSaveUserKey={handleSaveUserKey}
         onDeleteUserKey={handleDeleteUserKey}
@@ -267,12 +263,10 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
         setOptimizationLevel={setOptimizationLevel}
         optimizationTechnique={optimizationTechnique}
         setOptimizationTechnique={setOptimizationTechnique}
-        marketingFramework={marketingFramework}
-        setMarketingFramework={setMarketingFramework}
         advancedPrompting={advancedPrompting}
         setAdvancedPrompting={setAdvancedPrompting}
-        selectedProvider={selectedProvider}
-        setSelectedProvider={setSelectedProvider}
+        provider={selectedProvider}
+        setProvider={setSelectedProvider}
         ollamaModel={ollamaModel}
         setOllamaModel={setOllamaModel}
       />

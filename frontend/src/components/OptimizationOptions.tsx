@@ -6,8 +6,8 @@ interface OptimizationOptionsProps {
   setOptimizationLevel: (level: string) => void;
   optimizationTechnique: string;
   setOptimizationTechnique: (technique: string) => void;
-  marketingFramework: string;
-  setMarketingFramework: (framework: string) => void;
+  marketingFramework?: string;
+  setMarketingFramework?: (framework: string) => void;
   disabled: boolean;
   isAdvancedMode?: boolean;
 }
@@ -104,8 +104,9 @@ export const OptimizationOptions: React.FC<OptimizationOptionsProps> = ({
       </div>
 
       {/* Marketing Framework Dropdown */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
+      {marketingFramework !== undefined && setMarketingFramework !== undefined && (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between gap-2">
           <label htmlFor="framework-select" className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-600 transition-colors">
             Framework
           </label>
@@ -138,6 +139,7 @@ export const OptimizationOptions: React.FC<OptimizationOptionsProps> = ({
           <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
       </div>
+      )}
 
       </div>
       )}
