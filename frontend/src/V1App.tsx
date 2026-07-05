@@ -17,6 +17,7 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
 
   const [useServerKey, setUseServerKey] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState('OPENROUTER');
+  const [ollamaModel, setOllamaModel] = useState<string>(() => localStorage.getItem('promptcraft_ollama_model') || '');
   const [userKeys, setUserKeys] = useState<Record<string, string>>({});
   const [showApiModal, setShowApiModal] = useState(false);
   
@@ -60,6 +61,10 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
   useEffect(() => {
     localStorage.setItem('promptcraft_advanced_prompting', advancedPrompting.toString());
   }, [advancedPrompting]);
+
+  useEffect(() => {
+    localStorage.setItem('promptcraft_ollama_model', ollamaModel);
+  }, [ollamaModel]);
 
 
 
@@ -175,7 +180,7 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
 
     // Check credentials
     const effectiveUseServerKey = isAdmin && useServerKey;
-    if (!effectiveUseServerKey && !userKeys[selectedProvider]) {
+    if (selectedProvider !== 'OLLAMA' && !effectiveUseServerKey && !userKeys[selectedProvider]) {
       setErrorMsg(`API Key not available. Please configure your API key for ${selectedProvider}.`);
       setShowApiModal(true);
       return;
@@ -189,12 +194,13 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
       // In V1, the payload needs provider and prompt. We also added optimization_level, technique, marketing_framework
       const payload = {
         prompt: originalPrompt,
-        api_key: effectiveUseServerKey ? null : userKeys[selectedProvider],
+        api_key: effectiveUseServerKey ? null : (selectedProvider === 'OLLAMA' ? null : userKeys[selectedProvider]),
         use_server_key: effectiveUseServerKey,
         provider: selectedProvider,
         optimization_level: optimizationLevel,
         technique: advancedPrompting ? optimizationTechnique : 'Auto Detect',
-        marketing_framework: advancedPrompting ? marketingFramework : 'Auto Detect'
+        marketing_framework: advancedPrompting ? marketingFramework : 'Auto Detect',
+        ...(selectedProvider === 'OLLAMA' && ollamaModel ? { ollama_model: ollamaModel } : {})
       };
 
       const response = await fetch(`${API_BASE_URL}/optimize-prompt`, {
@@ -267,6 +273,8 @@ const V1App: React.FC<V1AppProps> = ({ onBackToHome }) => {
         setAdvancedPrompting={setAdvancedPrompting}
         selectedProvider={selectedProvider}
         setSelectedProvider={setSelectedProvider}
+        ollamaModel={ollamaModel}
+        setOllamaModel={setOllamaModel}
       />
 
       {/* Main Panels Workspace */}

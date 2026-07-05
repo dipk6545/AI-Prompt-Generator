@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldAlert, ShieldCheck, Key, Trash2, Eye, EyeOff, X, Check } from 'lucide-react';
 import { OptimizationOptions } from './OptimizationOptions';
+import { useOllamaStatus } from '../hooks/useOllamaStatus';
 
 
 interface HeaderProps {
@@ -24,9 +25,11 @@ interface HeaderProps {
   onBackToHome?: () => void;
   selectedProvider?: string;
   setSelectedProvider?: (provider: string) => void;
+  ollamaModel?: string;
+  setOllamaModel?: (model: string) => void;
 }
 
-const PROVIDERS = ['GROQ', 'MISTRAL', 'CEREBRAS', 'GEMINI', 'OPENROUTER'];
+const PROVIDERS = ['GROQ', 'MISTRAL', 'CEREBRAS', 'GEMINI', 'OPENROUTER', 'OLLAMA'];
 
 export const Header: React.FC<HeaderProps> = ({
   showApiModal,
@@ -44,14 +47,18 @@ export const Header: React.FC<HeaderProps> = ({
   setOptimizationTechnique,
   marketingFramework,
   setMarketingFramework,
-  advancedPrompting,
+        advancedPrompting,
   setAdvancedPrompting,
   onBackToHome,
   selectedProvider,
-  setSelectedProvider
+  setSelectedProvider,
+  ollamaModel,
+  setOllamaModel
 }) => {
   const [editKeys, setEditKeys] = useState<Record<string, string>>({});
   const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
+
+  const { running: ollamaRunning, models: ollamaModels } = useOllamaStatus();
 
   const handleAdminToggleClick = () => {
     if (isAdmin) {
@@ -101,17 +108,47 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
             <div className="mt-1 flex gap-2 h-9 items-center">
               {setSelectedProvider && selectedProvider ? (
-                <select
-                  value={selectedProvider}
-                  onChange={(e) => setSelectedProvider(e.target.value)}
-                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-700 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm cursor-pointer"
-                >
-                  {PROVIDERS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={selectedProvider}
+                    onChange={(e) => setSelectedProvider(e.target.value)}
+                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-700 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm cursor-pointer"
+                  >
+                    {PROVIDERS.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+
+                  {selectedProvider === 'OLLAMA' && setOllamaModel && ollamaModel !== undefined && (
+                    <div className="flex items-center gap-2 bg-violet-50/50 border border-violet-100 px-3 py-1.5 rounded-xl h-[38px]">
+                      <span
+                        className={`inline-block w-2 h-2 rounded-full ${
+                          ollamaRunning
+                            ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
+                            : 'bg-rose-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]'
+                        }`}
+                        title={ollamaRunning ? 'Ollama is running' : 'Ollama is not running'}
+                      />
+                      <select
+                        value={ollamaModel}
+                        onChange={(e) => setOllamaModel(e.target.value)}
+                        className="bg-transparent border-0 text-violet-700 text-xs font-bold focus:outline-none cursor-pointer p-0"
+                      >
+                        {ollamaModels.length === 0 ? (
+                          <option value="">No models found</option>
+                        ) : (
+                          ollamaModels.map((m) => (
+                            <option key={m} value={m}>
+                              {m}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </div>
+                  )}
+                </div>
               ) : useServerKey ? (
                 <span className="px-2 py-1 bg-violet-100 text-violet-700 text-xs font-semibold rounded-md border border-violet-200">All Available</span>
               ) : (
@@ -128,31 +165,33 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* API Key Mode Selector */}
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center cursor-default">
-            API Credentials
-          </label>
-          <div 
-            className={`flex items-center justify-center h-10 px-3 border rounded-xl transition-colors group relative cursor-pointer ${
-              isAdmin ? 'bg-slate-50 border-slate-200 hover:bg-slate-100' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-            }`}
-            onClick={() => {
-              if (useServerKey) {
-                setUseServerKey(false);
-                setShowApiModal(true);
-              } else {
-                setUseServerKey(true);
-              }
-            }}
-          >
-            <div className={`w-12 h-6 flex items-center bg-slate-300 rounded-full p-1 duration-300 ease-in-out ${!useServerKey ? 'bg-violet-500' : ''}`}>
-              <div className={`bg-white w-5 h-5 rounded-full shadow-md transform duration-300 ease-in-out ${!useServerKey ? 'translate-x-5' : ''}`} />
+        {selectedProvider !== 'OLLAMA' && (
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center cursor-default">
+              API Credentials
+            </label>
+            <div 
+              className={`flex items-center justify-center h-10 px-3 border rounded-xl transition-colors group relative cursor-pointer ${
+                isAdmin ? 'bg-slate-50 border-slate-200 hover:bg-slate-100' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+              }`}
+              onClick={() => {
+                if (useServerKey) {
+                  setUseServerKey(false);
+                  setShowApiModal(true);
+                } else {
+                  setUseServerKey(true);
+                }
+              }}
+            >
+              <div className={`w-12 h-6 flex items-center bg-slate-300 rounded-full p-1 duration-300 ease-in-out ${!useServerKey ? 'bg-violet-500' : ''}`}>
+                <div className={`bg-white w-5 h-5 rounded-full shadow-md transform duration-300 ease-in-out ${!useServerKey ? 'translate-x-5' : ''}`} />
+              </div>
+              <span className={`ml-2 text-xs font-bold ${!useServerKey ? 'text-violet-700' : 'text-slate-500'}`}>
+                {!useServerKey ? 'My API Key' : 'Server Key'}
+              </span>
             </div>
-            <span className={`ml-2 text-xs font-bold ${!useServerKey ? 'text-violet-700' : 'text-slate-500'}`}>
-              {!useServerKey ? 'My API Key' : 'Server Key'}
-            </span>
           </div>
-        </div>
+        )}
 
         {/* Modal for API Key Input */}
         {showApiModal && (
@@ -271,6 +310,7 @@ export const Header: React.FC<HeaderProps> = ({
         />
 
         {/* Divider + Admin */}
+        {selectedProvider !== 'OLLAMA' && (
           <>
             <div className="hidden md:block h-6 w-px bg-slate-200 self-end mb-2" />
 
@@ -302,6 +342,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
           </>
+        )}
       </div>
     </header>
   );

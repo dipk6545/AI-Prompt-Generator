@@ -17,6 +17,7 @@ const V2App: React.FC<V2AppProps> = ({ onBackToHome }) => {
 
   const [useServerKey, setUseServerKey] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState('OPENROUTER');
+  const [ollamaModel, setOllamaModel] = useState<string>(() => localStorage.getItem('promptcraft_ollama_model') || '');
   const [userKeys, setUserKeys] = useState<Record<string, string>>({});
   const [showApiModal, setShowApiModal] = useState(false);
   
@@ -60,6 +61,10 @@ const V2App: React.FC<V2AppProps> = ({ onBackToHome }) => {
   useEffect(() => {
     localStorage.setItem('promptcraft_advanced_prompting', advancedPrompting.toString());
   }, [advancedPrompting]);
+
+  useEffect(() => {
+    localStorage.setItem('promptcraft_ollama_model', ollamaModel);
+  }, [ollamaModel]);
 
 
 
@@ -175,7 +180,7 @@ const V2App: React.FC<V2AppProps> = ({ onBackToHome }) => {
 
     // Check credentials
     const effectiveUseServerKey = isAdmin && useServerKey;
-    if (!effectiveUseServerKey && !userKeys[selectedProvider]) {
+    if (selectedProvider !== 'OLLAMA' && !effectiveUseServerKey && !userKeys[selectedProvider]) {
       setErrorMsg(`API Key not available. Please configure your API key for ${selectedProvider}.`);
       setShowApiModal(true);
       return;
@@ -194,7 +199,8 @@ const V2App: React.FC<V2AppProps> = ({ onBackToHome }) => {
         technique: advancedPrompting ? optimizationTechnique : 'Auto Detect',
         marketing_framework: advancedPrompting ? marketingFramework : 'Auto Detect',
         advanced_prompting: advancedPrompting,
-        provider: selectedProvider
+        provider: selectedProvider,
+        ...(selectedProvider === 'OLLAMA' && ollamaModel ? { ollama_model: ollamaModel } : {})
       };
 
       const response = await fetch(`${API_BASE_URL}/api/optimize-prompt`, {
@@ -266,6 +272,8 @@ const V2App: React.FC<V2AppProps> = ({ onBackToHome }) => {
         setAdvancedPrompting={setAdvancedPrompting}
         selectedProvider={selectedProvider}
         setSelectedProvider={setSelectedProvider}
+        ollamaModel={ollamaModel}
+        setOllamaModel={setOllamaModel}
       />
 
       {/* Main Panels Workspace */}

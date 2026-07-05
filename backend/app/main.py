@@ -12,11 +12,15 @@ from app.services.prompt_analyzer import PromptAnalyzer
 
 analyzer = PromptAnalyzer()
 
+from app.services.ollama_service import router as ollama_router
+
 app = FastAPI(
     title="PromptCraft AI Backend",
     description="Backend service for prompt optimization and API key verification.",
     version="1.0.0"
 )
+
+app.include_router(ollama_router)
 
 # Enable CORS for frontend development server
 app.add_middleware(
@@ -39,7 +43,8 @@ def get_server_key(provider: str) -> str:
         return settings.GEMINI_API_KEY
     elif prov_upper == "OPENROUTER":
         return settings.OPENROUTER_API_KEY
-
+    elif prov_upper == "OLLAMA":
+        return ""  # Ollama is offline — no API key needed
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -113,16 +118,19 @@ async def api_optimize_prompt(payload: OptimizePromptRequestV2):
         refiner = LanguageRefiner()
         
         # Get api key
-        api_key = get_server_key(provider) if payload.use_server_key else payload.api_key
-        if not api_key:
-            raise HTTPException(status_code=400, detail="API Key is missing.")
+        api_key = None
+        if provider != "OLLAMA":
+            api_key = get_server_key(provider) if payload.use_server_key else payload.api_key
+            if not api_key:
+                raise HTTPException(status_code=400, detail="API Key is missing.")
                 
         # Validation Loop
         max_retries = 2
         optimized = structured
+        actual_model = provider
         for attempt in range(max_retries):
             try:
-                optimized = await refiner.refine_prompt(structured, provider, api_key)
+                optimized, actual_model = await refiner.refine_prompt(structured, provider, api_key, getattr(payload, 'ollama_model', None))
                 
                 # Basic validation: ensure it didn't just return JSON, and has at least one '#'
                 if "{" in optimized[:10] and "}" in optimized[-10:]:
@@ -141,11 +149,63 @@ async def api_optimize_prompt(payload: OptimizePromptRequestV2):
         # Generate report items
         report_items = [
             OptimizationReportItem(change="Applied PromptCraft Standard", reason=f"Categorized as {analysis.get('category')} and structured automatically."),
-            OptimizationReportItem(change="Language Refinement", reason=f"Language and tone refined by {provider}.")
+            OptimizationReportItem(change="Language Refinement", reason=f"Language and tone refined by {actual_model}.")
         ]
         if analysis.get('missing_information'):
             report_items.append(OptimizationReportItem(change="Missing Information Flagged", reason="Added missing context requests to ensure completeness."))
 
+        return OptimizePromptResponseV2(
+            optimized_prompt=optimized,
+            optimization_report=report_items,
+            diff=generate_diff(payload.prompt, optimized)
+        )
+
+    # ── OLLAMA offline path ──────────────────────────────────────────────────
+    if provider == "OLLAMA":
+        from app.providers.ollama_provider import OllamaProvider
+        import json
+        if not await OllamaProvider.health_check():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Ollama is not running. Please start Ollama and try again."
+            )
+        model = getattr(payload, 'ollama_model', None) or ((await OllamaProvider.list_models()) or [None])[0]
+        if not model:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No Ollama models found. Please pull a model first."
+            )
+        from app.services.prompt_templates import get_enhancement_system_prompt
+        system_prompt = get_enhancement_system_prompt(
+            payload.optimization_level, 
+            payload.technique, 
+            provider, 
+            getattr(payload, "marketing_framework", "None")
+        )
+        full_prompt = f"{system_prompt}\n\nUser prompt to optimize:\n{payload.prompt}"
+        raw = await OllamaProvider.generate(model, full_prompt)
+        try:
+            import re
+            clean = raw.strip()
+            fence_match = re.search(r'```(?:json)?\s*(\{.*\})\s*```', clean, re.DOTALL)
+            if fence_match:
+                clean = fence_match.group(1).strip()
+            else:
+                brace_start = clean.find('{')
+                brace_end = clean.rfind('}')
+                if brace_start != -1 and brace_end > brace_start:
+                    clean = clean[brace_start:brace_end + 1]
+            data = json.loads(clean, strict=False)
+            from app.services.prompt_formatter import format_optimized_prompt
+            optimized = format_optimized_prompt(data.get("optimized_prompt", payload.prompt))
+            report_items = [
+                OptimizationReportItem(change=i.get("change", "Enhancement"), reason=i.get("reason", ""))
+                for i in data.get("optimization_report", [])
+            ]
+        except Exception:
+            from app.services.prompt_formatter import format_optimized_prompt
+            optimized = format_optimized_prompt(raw)
+            report_items = [OptimizationReportItem(change="General Enhancement", reason="Optimized by Ollama.")]
         return OptimizePromptResponseV2(
             optimized_prompt=optimized,
             optimization_report=report_items,
@@ -182,31 +242,57 @@ async def optimize_prompt(payload: OptimizePromptRequest):
     provider = payload.provider.upper()
     
     # Determine the API key to use
-    if payload.use_server_key:
-        api_key = get_server_key(provider)
-        if not api_key:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Server API key for {provider} is not configured."
-            )
+    if provider != "OLLAMA":
+        if payload.use_server_key:
+            api_key = get_server_key(provider)
+            if not api_key:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Server API key for {provider} is not configured."
+                )
+        else:
+            if not payload.api_key or not payload.api_key.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"API key is required for {provider} when not using Server API Key."
+                )
+            api_key = payload.api_key.strip()
     else:
-        if not payload.api_key or not payload.api_key.strip():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"API key is required for {provider} when not using Server API Key."
-            )
-        api_key = payload.api_key.strip()
+        api_key = ""
     
     try:
-        from app.services.prompt_templates import get_enhancement_system_prompt
-        system_prompt = get_enhancement_system_prompt(
-            payload.optimization_level, 
-            payload.technique, 
-            provider, 
-            getattr(payload, "marketing_framework", "None")
-        )
-        
-        optimized = await optimize_prompt_llm(provider, payload.prompt, api_key, system_prompt=system_prompt)
+        if provider == "OLLAMA":
+            from app.providers.ollama_provider import OllamaProvider
+            if not await OllamaProvider.health_check():
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Ollama is not running. Please start Ollama and try again."
+                )
+            model = getattr(payload, 'ollama_model', None) or ((await OllamaProvider.list_models()) or [None])[0]
+            if not model:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No Ollama models found. Please pull a model first."
+                )
+            from app.services.prompt_templates import get_enhancement_system_prompt
+            system_prompt = get_enhancement_system_prompt(
+                payload.optimization_level, 
+                payload.technique, 
+                provider, 
+                getattr(payload, "marketing_framework", "None")
+            )
+            full_prompt = f"{system_prompt}\n\nUser prompt to optimize:\n{payload.prompt}"
+            optimized = await OllamaProvider.generate(model, full_prompt)
+        else:
+            from app.services.prompt_templates import get_enhancement_system_prompt
+            system_prompt = get_enhancement_system_prompt(
+                payload.optimization_level, 
+                payload.technique, 
+                provider, 
+                getattr(payload, "marketing_framework", "None")
+            )
+            
+            optimized = await optimize_prompt_llm(provider, payload.prompt, api_key, system_prompt=system_prompt)
         
         # In V1, the response might contain JSON if we fed it the schema_instructions.
         # But optimize_prompt expects a raw string. 

@@ -51,7 +51,19 @@ Return ONLY the refined prompt text. Do not wrap it in JSON. Do not add introduc
         
         provider_upper = base_provider.upper()
         
-        if provider_upper == "OPENROUTER_AUTO":
+        if provider_upper == "OLLAMA":
+            from app.providers.ollama_provider import OllamaProvider
+            if not ollama_model:
+                models = await OllamaProvider.list_models()
+                if models:
+                    ollama_model = models[0]
+            if not ollama_model:
+                raise ValueError("No Ollama models found")
+            full_prompt = f"{system_prompt}\n\nHere is the structured prompt to refine:\n\n{structured_prompt}"
+            refined = await OllamaProvider.generate(ollama_model, full_prompt)
+            return refined.strip(), ollama_model
+            
+        elif provider_upper == "OPENROUTER_AUTO":
             from app.services.llm_service import call_openrouter
             refined, actual_model = await call_openrouter(structured_prompt, api_key, system_prompt, "openrouter/auto")
             return refined.strip(), actual_model
